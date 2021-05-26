@@ -1,0 +1,611 @@
+<html>
+
+<script>
+
+
+//
+// Ultimate Tic-Tac-toe
+// Author: damian.adamowicz@gmail.com
+// 2021-05 initial deployment
+//
+
+// convert (i,j,x,y) coords to linear
+function ix9(i,j,x,y){
+    return i*3+j*3*3*3+x+y*3*3;
+}
+
+// convert [(i,j,x,y),...] to string: ijxyijxyijxyijxy
+function moves_toString(moves){
+    let s = [];
+    for(let m of moves){
+        s.push(`${m[0]}${m[1]}${m[2]}${m[3]}`);
+    }
+    return s.join('');
+}
+
+// T9 -> https://en.wikipedia.org/wiki/Ultimate_tic-tac-toe
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+class T9 {
+   
+    constructor(source){
+        this.board      = source ? [...source.board]            : Array.from({length:3*3*3*3}, (_,i) => '.');
+        this.last_move  = source ? source.last_move             : undefined;
+        this.current_player = source ? source.current_player    : 'O';
+        this.moves      = source ? [...source.moves]            : [];
+    }
+
+    // replay moves given as string ijxyijxyijxy
+    replay(moves){
+        for(let k=0;k<moves.length;k+=4){
+            let i = parseInt(moves[k+0]);
+            let j = parseInt(moves[k+1]);
+            let x = parseInt(moves[k+2]);
+            let y = parseInt(moves[k+3]);
+            this.make_move(i,j,x,y);
+        }
+    }
+
+    // get value of the field
+    gfield(i,j,x,y){
+        return this.board[ix9(i,j,x,y)];
+    }
+
+    // set value of the field, store move in the history, updates last_move according to uttt rules
+    // if last_move===undefined => any sub-board available
+    // if last_move!==undefined => sub-board [last_move.x,last_move.y] expected;
+    // last_move is used in possibilities3x3()
+    // no validation, no sanitization
+    sfield(i,j,x,y,c){
+        this.board[ix9(i,j,x,y)] = c;
+        this.moves.push([i,j,x,y]);
+        if (this.winner3x3(i,j)=='.' && this.winner3x3(x,y)=='.'){
+            this.last_move = [i,j,x,y];
+        }else{
+            this.last_move = undefined;
+        }        
+    }
+
+    // provides possible moves [(x,y),...] within sub-board(i,j)
+    possibilities3x3(i,j){
+        let p = [];
+        // validate against last move
+        if (this.last_move!=undefined){                
+            if (i!=this.last_move[2] || j!=this.last_move[3]){
+                return p;
+            }
+        }
+        // validate against possible 3x3 (i.e. - no winner yet)
+        if (this.winner3x3(i,j)=='.'){
+            // collect empty spaces
+            for(let y=0;y<3;y++){
+                for(let x=0;x<3;x++){
+                    if (this.gfield(i,j,x,y)=='.'){
+                        p.push([x,y]);
+                    }
+                }
+            }
+        }
+        return p;
+    }
+
+    // provides all possible moves [(i,j,x,y),...]
+    possibilities9x9(){
+        let ps = [];
+        for(let i=0;i<3;i++){
+            for(let j=0;j<3;j++){
+                let p = this.possibilities3x3(i,j);
+                for(let q of p){
+                    ps.push([i,j,q[0],q[1]]);
+                }
+            }
+        }
+        return ps;
+    }
+
+    // provides winner of sub-board(i,j)
+    winner3x3(i,j){
+        let that = this;
+        let getw = function(x,y){
+            return that.gfield(i,j,x,y);
+        }
+        return this._winner(getw);
+    }
+
+    // provides winner of the game
+    winner9x9(){
+        let that = this;
+        let getw = function(i,j){
+            let get3x3 = function(x,y){
+                return that.gfield(i,j,x,y);
+            }
+            return that._winner(get3x3);
+        }
+        return this._winner(getw);
+    }
+
+    // helper; provides winner of regular tic-tac-toe rules, where value of the 3x3 field is taken from argument getter function
+    _winner(getw){
+        {
+            for(let k=0;k<3;k++){
+                {
+                    let n = [getw(0,k),getw(1,k),getw(2,k)];
+                    if (n[0]==n[1] && n[0]==n[2] && n[0]!='.') return n[0];
+                }
+                {
+                    let n = [getw(k,0),getw(k,1),getw(k,2)];
+                    if (n[0]==n[1] && n[0]==n[2] && n[0]!='.') return n[0];
+                }
+            }            
+            {
+                let n = [getw(0,0),getw(1,1),getw(2,2)];
+                if (n[0]==n[1] && n[0]==n[2] && n[0]!='.') return n[0];
+            }
+            {
+                let n = [getw(2,0),getw(1,1),getw(0,2)];
+                if (n[0]==n[1] && n[0]==n[2] && n[0]!='.') return n[0];
+            }
+        }
+        return '.';
+    }
+
+    // makes move (i,j,x,y) of current player;
+    // if move is valid updates board with the move, increments player, return true (otherwise do nothing and return false)
+    // - sub-board(i,j) at coords(x,y) is empty
+    // AND
+    // - there is no winner of sub-board(i,j))
+    make_move(i,j,x,y){
+        let c = this.current_player;
+        // is there a place for 'c'?
+        if (this.gfield(i,j,x,y)!='.'){
+            return false;
+        }
+        // is there a winner already?
+        if (this.winner3x3(i,j)!='.'){
+            return false;
+        }
+        // ?? double check? or what? FIXME
+        let found = undefined;
+        let ps = this.possibilities9x9();
+        for(let p of ps){
+            if (''+p==''+[i,j,x,y])
+                found = p
+        }
+        if (found==undefined){
+            return false;
+        }
+        // update board
+        this.sfield(i,j,x,y,c);
+        // increment player
+        this.current_player = c=='X' ? 'O' : 'X';
+        return true;
+    }
+}
+
+// helper; returns random item from the argument array
+function random_item(ar){
+    return ar[(Math.random()*ar.length)>>0]
+}
+
+// AI_Random
+// Simple AI that takes randome move from list of all possible moves
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+class AI_Random{
+    get_move(game,c,depth){
+        let ps = game.possibilities9x9();
+        return random_item(ps);
+    }    
+}
+
+// AI_ShortSight
+// 1) is there a move that wins sub-board? make it (i.e. select random from all possible winnig moves)
+// ELSE
+// 2) is there a move that blocks opponent? make it (i.e. select random from all possible blocking moves)
+// ELSE
+// 3) make random move from possible moves
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+class AI_ShortSight{
+    find_winning(game,c){
+        let ps = game.possibilities9x9();
+        let winning = [];
+        for(let p of ps){
+            let test = new T9(game);
+            test.current_player = c;            
+            test.make_move(p[0],p[1],p[2],p[3]);
+            let w = test.winner3x3(p[0],p[1]);
+            if (w==c) { winning.push(p); }
+        }
+        return winning;
+    }
+    get_move(game,c,depth){
+        let me = c;
+        let op = c=='X'?'O':'X';        
+        let winning = this.find_winning(game,me);
+        if (winning.length){
+            return random_item(winning);
+        }
+        let blocking = this.find_winning(game,op);        
+        if (blocking.length){
+            return random_item(blocking);
+        }
+        let ps = game.possibilities9x9();
+        return random_item(ps);
+    }
+}
+
+// helper; returns true if argument array contains the item
+// comparision by toString
+function contains(arr,it){
+    it = ''+it;
+    for(let c of arr){
+        if (''+c==it) return true;
+    }
+    return false;
+}
+
+// AI_ShortSightExt
+// bit more complex logic than AI_ShortSight; see the code below
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+class AI_ShortSightExt extends AI_ShortSight{
+
+    get_move(game,c,depth){
+        return random_item(this.get_moves(game,c,depth));
+    }
+
+    get_moves(game,c,depth){
+        let me = c;
+        let op = c=='X'?'O':'X';        
+        let winning = this.find_winning(game,me);
+        let blocking = this.find_winning(game,op);        
+        let ps = game.possibilities9x9();
+        let neu = [];
+        for(let p of ps){
+            if (contains(winning,p))
+                continue;
+            if (contains(blocking,p))
+                continue;
+            neu.push(p);
+        }
+
+        // win-neu  0
+        // win-win  1
+        // blk-neu  2
+        // blk-win  4
+        // neu-neu  3
+        // neu-win  5
+
+        let opt = {};
+        for(let k of [0,1,2,3,4,5]) opt[k] = [];
+        for(let [no,yes,arr] of [ [0,1,winning], [2,4,blocking], [3,5,neu]]){        
+            for(let p of arr){
+                let test = new T9(game);
+                test.make_move(p[0],p[1],p[2],p[3]);                
+                let opw = this.find_winning(test,op);
+                let v = opw.length ? yes : no;
+                opt[v].push(p);
+            }
+        }
+        for(let k of [0,1,2,3,4,5]){
+            let o = opt[k];
+            if (o.length){
+                return o;
+            }
+        }
+        throw "ups?!";
+    }
+}
+
+
+// render game to console
+function render_console(game){
+    let s = []
+    for(let j=0;j<3;j++){
+        for(let y=0;y<3;y++){
+            for(let i=0;i<3;i++){
+                for(let x=0;x<3;x++){
+                    s.push(game.gfield(i,j,x,y));
+                }
+                s.push(' ');
+            }
+            s.push('\n');
+        }
+        s.push('\n');
+    }
+    console.log(s.join(''));
+}
+
+// poor man flashing
+function flash(p,c){
+    let [i,j,x,y] = p;
+    let id = `${i}${j}${x}${y}`;
+    let nd = document.getElementById(id);    
+    delay = 0;
+    for(let k=0;k<5;k++){
+        setTimeout(function(){
+            nd.classList.remove('pX');
+            nd.classList.remove('pO');
+            nd.classList.add('pp');
+        },delay);
+        delay+=100-k*20;
+        
+        setTimeout(function(){
+            nd.classList.remove('pp');
+            nd.classList.add(c);
+        },delay);
+        delay+=100-k*20;
+    }
+    
+}
+
+
+// render to HTML
+function render_html(game){
+    //console.log(game);    
+    for(let i=0;i<3;i++){
+        for(let j=0;j<3;j++){
+            for(let x=0;x<3;x++){
+                for(let y=0;y<3;y++){
+                    let id = `${i}${j}${x}${y}`;
+                    let nd = document.getElementById(id);
+                    //nd.className = 'single_slot';
+                    let v = game.gfield(i,j,x,y);
+                    if (v=='.'){
+                        v='pp';
+                    }else{
+                        v=`p${v}`;
+                    }
+                    nd.className = 'node '+v;
+                }
+            }
+        }
+    }
+
+
+    let ai = new AI_ShortSightExt();
+    let ms = ai.get_moves(game,game.current_player,0);
+
+    let ps = game.possibilities9x9();
+    for(p of ps){
+        let [i,j,x,y] = p;
+        let id = `${i}${j}${x}${y}`;
+        let nd = document.getElementById(id);
+        if (contains(ms,p)){
+            nd.className += ' possible';
+        }else{
+            nd.className += ' hint';
+        }
+    }
+    return;
+    for(let x=0;x<3;x++){
+        for(let y=0;y<3;y++){
+            let id = `m${x}.${y}`;
+            let nd = document.getElementById(id);
+            let v = game.winner3x3(x,y);
+            if (v=='.'){
+                v='dot.png';
+            }else{
+                v=`${v}.png`;
+            }
+            nd.src = v;
+        }
+    }
+    {
+        let v = game.winner9x9();
+        if (v=='.'){
+                v='dot.png';
+            }else{
+                v=`${v}.png`;
+            }
+        document.getElementById("winner").src = v;
+    }
+    
+}
+
+// prepare HTML for render_html
+function prepare_display(){
+    let board = document.getElementById('board');
+    for(let j=0;j<3;j++)    
+    for(let i=0;i<3;i++)
+    {
+        let sb = document.createElement('span');
+        sb.className = 'grid3x3 board3x3';
+        for(let y=0;y<3;y++)
+        for(let x=0;x<3;x++)
+        {
+            let nd = document.createElement('span');
+            let id = `${i}${j}${x}${y}`;
+            nd.className = 'node pp';
+            nd.id = id;
+            nd.addEventListener('click',function(){
+                        if (game.make_move(i,j,x,y)){
+                            let p = ai.get_move(game,game.current_player,5);
+                            game.make_move(p[0],p[1],p[2],p[3]);
+                            render_html(game);
+                            // FIXME
+                            let v = game.gfield(p[0],p[1],p[2],p[3]);
+                            if (v=='.'){
+                                v='pp';
+                            }else{
+                                v=`p${v}`;
+                            }
+
+                            flash(p,v);
+                            window.location.hash = '#'+moves_toString(game.moves);
+                        }
+                    },false);
+
+            sb.appendChild(nd);
+        }
+        board.appendChild(sb);
+    }
+    /*
+    for(let j=0;j<3;j++){
+        let h = document.createElement('div');
+        h.style = 'margin-bottom:10px';        
+        for(let y=0;y<3;y++){            
+            let r = document.createElement('div');
+            for(let i=0;i<3;i++){
+                let s = document.createElement('span');
+                for(let x=0;x<3;x++){
+                    let nd = document.createElement('img');
+                    nd.className = "single_slot";
+                    nd.id = `${i}.${j}.${x}.${y}`;
+                    nd.addEventListener('click',function(){
+                        if (game.make_move(i,j,x,y)){
+                            let p = ai.get_move(game,game.current_player,5);
+                            game.make_move(p[0],p[1],p[2],p[3]);
+                            render_html(game);
+                            flash(p);
+                            window.location.hash = '#'+moves_toString(game.moves);
+                        }
+                    },false);
+                    s.appendChild(nd);
+                }
+                s.style = 'margin-right:10px;';
+                r.appendChild(s);
+            }
+            h.appendChild(r);
+        }
+        d_game.appendChild(h);
+    }
+
+    let m_game = document.getElementById('mgame');
+    for(let y=0;y<3;y++){            
+        let r = document.createElement('div');
+        let s = document.createElement('span');
+        for(let x=0;x<3;x++){
+            let nd = document.createElement('img');
+            nd.className = "mini_slot";
+            nd.id = `m${x}.${y}`;
+            s.appendChild(nd);
+        }
+        s.style = 'margin-right:10px;';
+        r.appendChild(s);
+        m_game.appendChild(r);
+    }      
+    */
+}
+
+// make a move with ai
+function autogame(){
+    let p = ai.get_move(game,game.current_player,0);
+    game.make_move(p[0],p[1],p[2],p[3]);    
+    render_html(game);
+    flash(p);
+}
+
+ai = new AI_ShortSightExt();
+game = new T9();
+
+// onload
+function main(){
+    prepare_display();
+    
+
+    let history = window.location.hash.substr(1);
+    if (history){
+        game.replay(history);
+    }
+
+    //game.replay('21000010101111000000002222121201010000212111111010101012122020000001010101111122220202101002022020121211110101121212120202010121212121121210102121020202021212212220201111202021211010222221212020222200001111212122001202222211111111120110100000202002022101020211202022010120100101221020222211020002');
+    //render_html(game);
+    if (false)
+    for(let ai of [
+        {'O':new AI_Random(),        'X':new AI_Random()},
+        {'O':new AI_Random(),        'X':new AI_ShortSight()},
+        {'O':new AI_Random(),        'X':new AI_ShortSightExt()},
+        {'O':new AI_ShortSight(),    'X':new AI_ShortSight()},
+        {'O':new AI_ShortSight(),    'X':new AI_ShortSightExt()},
+        {'O':new AI_ShortSightExt(), 'X':new AI_ShortSightExt()}
+        ]){
+        console.log(ai);
+        let results = { 'O':0, 'X':0, '.':0 };
+        for(let i=0;i<20;i++){
+            let game = new T9();
+            while (game.possibilities9x9().length){
+                let p = ai[game.current_player].get_move(game,game.current_player,0);
+                game.make_move(p[0],p[1],p[2],p[3]);
+            }
+            //console.log('winner: '+game.winner9x9()+' moves: '+game.moves.length);
+            //console.log(moves_toString(game.moves));
+            results[game.winner9x9()]++;
+        }        
+        console.log(results);
+    }    
+
+         
+    render_html(game);
+}
+
+
+</script>
+
+<style>
+.possible{
+    background-color:#9f9;
+}
+.hint{
+    background-color:#ff9;
+}
+
+* { zborder: 1px solid #f0f; margin:0px; padding: 0px;}
+
+html { height: 100%; }
+body { min-height: 100%}
+
+.node{
+  cursor:pointer;
+  background-size:90% 90%;
+  background-position: center;
+  background-repeat: no-repeat no-repeat;  
+  border: 1px solid #bbb;
+}
+
+.pO{
+  background-image:url("o.png");
+}
+
+.pX{
+  background-image:url("x.png");
+}
+
+.pp{
+  background-image:url("dot.png");
+}
+
+
+.board9x9{
+  margin:auto;
+  width: 100vmin;
+  height: 100vmin;
+}
+
+.board3x3{
+  border: 1px solid #999;
+}
+
+.grid3x3{
+  display:grid;
+  grid-template-columns: auto auto auto;
+  grid-template-rows: auto auto auto;
+}</style>
+
+
+<body onload=main()>
+
+<!--
+<div id=dgame></div>
+<hr>
+<div id=mgame></div>
+<br>
+<div id=wgame><img id=winner src='dot.png' class='mini_slot'></div>
+<hr>
+<button onclick=autogame()>autogame</button>
+-->
+
+<span class='grid3x3 board9x9' id=board>
+</span>
+
+</body>
+
+
+</html>
