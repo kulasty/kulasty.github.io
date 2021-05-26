@@ -314,10 +314,7 @@ function render_console(game){
 }
 
 // poor man flashing
-function flash(p,c){
-    let [i,j,x,y] = p;
-    let id = `${i}${j}${x}${y}`;
-    let nd = document.getElementById(id);    
+function flash(nd,c){
     delay = 0;
     for(let k=0;k<5;k++){
         setTimeout(function(){
@@ -336,6 +333,14 @@ function flash(p,c){
     
 }
 
+// helper; changes pin from board to corresponding CSS class name
+function pin_to_cssClass(pin){
+    if (pin=='.'){
+        return 'pp';
+    }else{
+        return `p${pin}`;
+    }
+}
 
 // render to HTML
 function render_html(game){
@@ -347,12 +352,7 @@ function render_html(game){
                     let id = `${i}${j}${x}${y}`;
                     let nd = document.getElementById(id);
                     //nd.className = 'single_slot';
-                    let v = game.gfield(i,j,x,y);
-                    if (v=='.'){
-                        v='pp';
-                    }else{
-                        v=`p${v}`;
-                    }
+                    let v = pin_to_cssClass(game.gfield(i,j,x,y));
                     nd.className = 'node '+v;
                 }
             }
@@ -374,28 +374,26 @@ function render_html(game){
             nd.className += ' hint';
         }
     }
-    return;
+    
     for(let x=0;x<3;x++){
         for(let y=0;y<3;y++){
-            let id = `m${x}.${y}`;
+            let id = `${x}${y}`;
             let nd = document.getElementById(id);
-            let v = game.winner3x3(x,y);
-            if (v=='.'){
-                v='dot.png';
-            }else{
-                v=`${v}.png`;
+            let v = pin_to_cssClass(game.winner3x3(x,y));
+            if (!nd.classList.contains(v)){
+                flash(nd,v);
             }
-            nd.src = v;
+            //nd.className = 'node '+ v;
+            
         }
     }
+    
     {
-        let v = game.winner9x9();
-        if (v=='.'){
-                v='dot.png';
-            }else{
-                v=`${v}.png`;
-            }
-        document.getElementById("winner").src = v;
+        let v = pin_to_cssClass(game.winner9x9());
+        let nd = document.getElementById("0");
+        if (!nd.classList.contains(v)){
+            flash(nd,v);
+        }        
     }
     
 }
@@ -406,12 +404,12 @@ function prepare_display(){
     for(let j=0;j<3;j++)    
     for(let i=0;i<3;i++)
     {
-        let sb = document.createElement('span');
+        let sb = document.createElement('div');
         sb.className = 'grid3x3 board3x3';
         for(let y=0;y<3;y++)
         for(let x=0;x<3;x++)
         {
-            let nd = document.createElement('span');
+            let nd = document.createElement('div');
             let id = `${i}${j}${x}${y}`;
             nd.className = 'node pp';
             nd.id = id;
@@ -419,16 +417,9 @@ function prepare_display(){
                         if (game.make_move(i,j,x,y)){
                             let p = ai.get_move(game,game.current_player,5);
                             game.make_move(p[0],p[1],p[2],p[3]);
-                            render_html(game);
-                            // FIXME
-                            let v = game.gfield(p[0],p[1],p[2],p[3]);
-                            if (v=='.'){
-                                v='pp';
-                            }else{
-                                v=`p${v}`;
-                            }
-
-                            flash(p,v);
+                            render_html(game);                            
+                            let v = pin_to_cssClass(game.gfield(p[0],p[1],p[2],p[3]));
+                            flash(document.getElementById(`${p[0]}${p[1]}${p[2]}${p[3]}`),v);
                             window.location.hash = '#'+moves_toString(game.moves);
                         }
                     },false);
@@ -437,52 +428,23 @@ function prepare_display(){
         }
         board.appendChild(sb);
     }
-    /*
-    for(let j=0;j<3;j++){
-        let h = document.createElement('div');
-        h.style = 'margin-bottom:10px';        
-        for(let y=0;y<3;y++){            
-            let r = document.createElement('div');
-            for(let i=0;i<3;i++){
-                let s = document.createElement('span');
-                for(let x=0;x<3;x++){
-                    let nd = document.createElement('img');
-                    nd.className = "single_slot";
-                    nd.id = `${i}.${j}.${x}.${y}`;
-                    nd.addEventListener('click',function(){
-                        if (game.make_move(i,j,x,y)){
-                            let p = ai.get_move(game,game.current_player,5);
-                            game.make_move(p[0],p[1],p[2],p[3]);
-                            render_html(game);
-                            flash(p);
-                            window.location.hash = '#'+moves_toString(game.moves);
-                        }
-                    },false);
-                    s.appendChild(nd);
-                }
-                s.style = 'margin-right:10px;';
-                r.appendChild(s);
-            }
-            h.appendChild(r);
-        }
-        d_game.appendChild(h);
+    
+    let board_top = document.getElementById('board_top');
+    for(let y=0;y<3;y++) 
+    for(let x=0;x<3;x++){
+        let nd = document.createElement('span');
+        nd.className = "node";
+        nd.id = `${x}${y}`;
+        board_top.appendChild(nd);
     }
 
-    let m_game = document.getElementById('mgame');
-    for(let y=0;y<3;y++){            
-        let r = document.createElement('div');
-        let s = document.createElement('span');
-        for(let x=0;x<3;x++){
-            let nd = document.createElement('img');
-            nd.className = "mini_slot";
-            nd.id = `m${x}.${y}`;
-            s.appendChild(nd);
-        }
-        s.style = 'margin-right:10px;';
-        r.appendChild(s);
-        m_game.appendChild(r);
-    }      
-    */
+    {
+        let board_win = document.getElementById('board_win');
+        let nd = document.createElement('span');
+        nd.className = "node"
+        nd.id = '0'
+        board_win.appendChild(nd);
+    }
 }
 
 // make a move with ai
@@ -490,7 +452,7 @@ function autogame(){
     let p = ai.get_move(game,game.current_player,0);
     game.make_move(p[0],p[1],p[2],p[3]);    
     render_html(game);
-    flash(p);
+    //flash(p);
 }
 
 ai = new AI_ShortSightExt();
@@ -562,21 +524,27 @@ body { min-height: 100%}
 
 .pO{
   background-image:url("o.png");
+  background-color:#fff;
 }
 
 .pX{
   background-image:url("x.png");
+  background-color:#fff;
 }
 
 .pp{
   background-image:url("dot.png");
+  zbackground-color:#f0f;
 }
 
 
-.board9x9{
-  margin:auto;
-  width: 100vmin;
-  height: 100vmin;
+.board{  
+  position:absolute;
+  transform: translate(-50%, -50%);  
+  top:50%;
+  left:50%;
+  width: 90vmin;
+  height: 90vmin;
 }
 
 .board3x3{
@@ -587,23 +555,40 @@ body { min-height: 100%}
   display:grid;
   grid-template-columns: auto auto auto;
   grid-template-rows: auto auto auto;
-}</style>
+}
+
+.grid1x1{
+  display:grid;
+  grid-template-columns: auto;
+  grid-template-rows: auto;
+}
+
+#board_top{
+    zbackground-color:#0ff;
+    opacity:90%;
+    pointer-events: none;
+}
+
+#board_win{
+    zbackground-color:#0ff;
+    opacity:90%;
+    pointer-events: none;
+}
+
+#desk{
+    zposition:relative;
+}
+
+</style>
 
 
 <body onload=main()>
 
-<!--
-<div id=dgame></div>
-<hr>
-<div id=mgame></div>
-<br>
-<div id=wgame><img id=winner src='dot.png' class='mini_slot'></div>
-<hr>
-<button onclick=autogame()>autogame</button>
--->
-
-<span class='grid3x3 board9x9' id=board>
-</span>
+<div id=desk>
+<div class='grid3x3 board' id=board></div>
+<div class='grid3x3 board' id=board_top></div>
+<div class='grid1x1 board' id=board_win></div>
+</div>
 
 </body>
 
