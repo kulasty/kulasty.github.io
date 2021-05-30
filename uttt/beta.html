@@ -1,6 +1,9 @@
 <html>
 
+<head>
 <meta charset="utf-8" />
+<title>Ultmate Tic-Tac-Toe</title>
+</head>
 
 <script>
 
@@ -571,7 +574,7 @@ function do_hints_change(){
     cursor:pointer !important;
 }
 
-* { zborder: 1px solid #f0f; margin:0px; padding: 0px;}
+* { border: 1px solid #f0f; margin:0px; padding: 0px;}
 * { font-family: verdana, arial, sans-serif; }
 
 html { height: 100%; }
@@ -698,20 +701,26 @@ body { min-height: 100%}
 
 #ui * {
     font-size:20pt;
-    margin:0.1em;
+    margin:0.2em;
 }
 
-.ui_slot {
-    display:block;
+.ui_slot{        
+    display:block;        
 }
 
-#ui input, #ui label {
+#ui input[type=button]{
   padding:0.5em;
   cursor:pointer;
+  width:10em;
 }
 
-input[type=checkbox]{
+#ui input[type=checkbox]{
     transform: scale(2);
+    cursor:pointer;
+}
+
+#ui label{
+    cursor:pointer;
 }
 
 </style>
@@ -730,9 +739,12 @@ input[type=checkbox]{
     <input type=button id=btn_back value="Cofnij ruch" onclick="do_back()"></input>
     </span>
 
-    <span class='ui_slot'>
+    <span class='ui_slot' style='padding-top:1em;'>
     <label for=cbx_hints>Pokaż podpowiedzi</label>
     <input type=checkbox id=cbx_hints onchange="do_hints_change()"></input>
+    </span>
+    <span class='ui_slot' style='padding-top:1em;'>    
+        <a href="https://en.wikipedia.org/wiki/Ultimate_tic-tac-toe" target="_blank">Zasady na wikipedii</a>
     </span>
 
 </div><!-- ui -->    
