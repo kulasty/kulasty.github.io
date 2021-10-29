@@ -1,0 +1,243 @@
+<html>
+
+<head>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"> </script>
+
+<script>
+
+var Inspector = {
+	Properties: function(o){var s=[]; for(i in o) s.push(""+i); return s.join(",");},
+	Watch: function(o) {
+	    var s=[];
+	    for(i in o)
+	    {
+	        try
+	        {
+	            var v="";
+	            try
+	            {
+	                v = o[i];
+	                try
+	                {
+	                  //if (v.length != undefined)	                    s.push(".."+i);//+Inspector.Watch(v));
+	                }   
+	                catch(ex)
+	                {
+	                }
+	            }
+	            catch(e)
+	            {
+	                v = ""+e;
+	            }
+	            s.push(""+i+":"+v);
+	        }
+	        catch(ee)
+	        {
+	            s.push(""+ee);
+	        }
+	    }
+	    s.sort();
+	    return "$$$Dump:"+o+"<br>"+s.join("<br>");
+    }
+};
+
+var dbg_temp = "";
+
+function debug(msg){
+	console.log('[D]',msg)
+}
+
+function org_debug(msg)
+{
+	var dbg = document.getElementById("debug");
+	if (dbg==null)
+	{
+		dbg_temp+=msg+"<br>";
+		return;
+	}
+	else
+	{
+		if (dbg_temp!="")
+			msg = dbg_temp + msg;
+		dbg_temp = "";
+	}
+	dbg.innerHTML+=msg+"<br>";
+	dbg.scrollTop = 999999;
+}
+
+</script>
+
+<script src="Planet.js"> </script>
+<script src="PlanetEngine.js"> </script>
+<script src="LittlePrinceGame.js"> </script>
+<script src="PlanetRendererHtml.js"> </script>
+<script src="PlanetRendererCanvas2d.js"> </script>
+<script src="PlanetRendererCanvas3d.js"> </script>
+
+<script>
+
+function ImplTest(a){try{ eval('""+'+a); return a+"\r\n: OK";} catch(e) { return a+"\r\n: "+e; } }
+
+function tmain()
+{
+debug("LittlePrince v0.1");
+var s = [];
+	//s.push(ImplTest("NotImeplemented"));
+	//s.push(ImplTest("Math"));
+	//s.push(ImplTest("Vector"));
+	//s.push(ImplTest("Planetoid"));
+	//s.push(ImplTest("PlanetEngine"));
+	//s.push(ImplTest("LittlePrinceGame"));
+	s.push(ImplTest("PlanetRendererHtml"));
+	s.push(ImplTest("PlanetRendererCanvas2d"));
+	s.push(ImplTest("PlanetRendererCanvas3d"));
+debug(s.join("<br>"));
+
+debug("Math.Random = " +Math.random);
+game = LittlePrinceGame().CreateDefault();
+
+debug("main.exit");
+
+}
+
+function Render(Renderer)
+{
+	Renderer.BeginScene();
+	for(var i=0;i<game.planets.length;i++)
+		Renderer.UpdateSprite(game.planets[i], "planet", 1, 1);
+	
+	Renderer.UpdateSprite(game.prince, "prince", 0.5, 1);
+	
+	Renderer.UpdateSprite(game.rose, "rose", 0.5, 1);
+}
+
+function idle()
+{
+    try
+    {
+	    game.Advance(0.25);
+		game.Advance(0.25);
+	    Render(PlanetRendererHtml);
+	    Render(PlanetRendererCanvas2d);
+	    Render(PlanetRendererCanvas3d);
+	    setTimeout("idle();",33);
+    }
+    catch(e)
+    {
+	    debug("Exception: " + (e.message?e.message:e));
+	    //debug(Inspector.Watch(e));
+    }
+}
+
+
+function main()
+{
+	/*
+    $(document).keydown(function(event){
+        //debug("key:"+event.keyCode);
+        game.Jump();
+        });
+    //try{ tmain(); }catch(e){debug(""+e);}
+	*/
+	document.onclick = function(){
+		game.Jump();
+	}
+	
+    tmain();
+    idle();
+}
+
+
+
+</script>
+
+<style>
+
+*{margin:0;padding:0;}
+
+.screen
+{
+	zborder:1px solid #f00;
+	width:640px;
+	height:480px;
+	position:relative;
+	background-color:#abf;
+	margin:0px;
+	overflow:hidden;
+}
+
+#display
+{
+	zdisplay:none;
+}
+
+#display2d
+{
+	zdisplay:none;
+	zopacity:0.5;
+}
+
+#display3d
+{
+	zdisplay:none;
+}
+
+.sprite
+{
+	position:absolute;
+	margin:0px;
+	padding:0px;
+	zborder:1px solid #f00;
+}
+
+.label
+{
+	position:absolute;
+	top:10px;
+	left:10px;
+	font-weight:bold;
+	font-family:tahoma, verdana, arial;
+	z-index:100;
+}
+
+.dispc
+{
+	position:relative;
+	zborder:1px solid #f00;
+	float:left;
+}
+
+</style>
+
+
+</head>
+
+<body onload="main()">
+<div style='clear:both;'>
+
+<div class=dispc>
+<div id='display' class='screen'></div>
+<div class='label'>Html/Css</div>
+</div>
+
+<div class=dispc>
+<canvas id='display2d' class='screen'></canvas>
+<div class='label'>Canvas2d</div>
+</div>
+
+<div class=dispc>
+<canvas id='display3d' class='screen'></canvas>
+<div class='label'>WebGl</div>
+</div>
+
+</div>
+<div style='clear:both;'/>
+<!--
+<hr>
+<div id="debug" style='font-family:courier new; height:250px; overflow:scroll; border:1px solid #f00;'>
+</div>
+-->
+</body>
+
+</html>
