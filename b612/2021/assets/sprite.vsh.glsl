@@ -15,5 +15,7 @@ varying vec2 uv_bck;
 void main(void){
     uv_bck = uv;
     vec2 p = vp.xy*scale.xy;
-    gl_Position = vec4(dot(p.xy,rot_bck.xy)+pos.x,dot(vec2(-p.x,p.y),rot_bck.yx)+pos.y,0.,1.);
+    //gl_Position = vec4(dot(p.xy,rot_bck.xy)+pos.x,dot(vec2(-p.x,p.y),rot_bck.yx)+pos.y,0.,1.);    
+    vec2 rot_bckq = vec2(cos(rot_bck.x),sin(rot_bck.x));
+    gl_Position = vec4(dot(p.xy,rot_bckq.xy)+(pos.x/400.-1.),dot(vec2(-p.x,p.y),rot_bckq.yx)+(1.-pos.y/400.),0.,1.);
 }

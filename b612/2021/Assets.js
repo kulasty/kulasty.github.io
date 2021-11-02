@@ -1,3 +1,5 @@
+"use strict;"
+
 var txr2d = {
     planet: _createTexture("backdisk.png"),
     light:  _createTexture("lighting2.png"),

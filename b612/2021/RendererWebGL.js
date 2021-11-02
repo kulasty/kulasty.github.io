@@ -1,3 +1,5 @@
+"use strict;"
+
 //
 // LittlePrince JS
 // (c) Damian Adamowicz
@@ -13,11 +15,28 @@ function _createGraphics3d(width, height){
 	let canvas = document.getElementById("display");    
     canvas.width = width;
     canvas.height = height;
+
+    let gl = undefined;
+    var names=["webgl3", "webgl2", "webgl","experimental-webgl","webkit-3d","moz-webgl"];
+    for(const name of names){
+        try{
+            let gx = canvas.getContext(name);
+            console.log("[i]","WebGl",name,gx);
+            if (gx!==null){
+                gl = gx;
+                break;
+            }
+        }catch(e){
+            console.log("[!]",name,e);
+        }
+    }     
     
+     /*
 	let gl = canvas.getContext("webgl2",{
         antialias: true,
         premultipliedAlpha: false,
     });
+    */
 
     gl.viewport(0,0,width,height);    
 
@@ -133,6 +152,8 @@ class RendererWebGL {
         
         this.$texas = {}
         this.valid = false;
+
+        this.camera = new Camera();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -172,23 +193,27 @@ class RendererWebGL {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     RenderSprite(sprite,tex,cmul,cadd){       
+        const t1 = perfmon.time;
         let gl = this.gx;
         var prog = this.progs.sprite;                
-        gl.useProgram(prog.prog);        
+        gl.useProgram(prog.prog);
         gl.activeTexture(gl.TEXTURE2);
         gl.bindTexture(gl.TEXTURE_2D, tex.tex);
 
         const f = sprite.globalRotation;        
         const p = sprite.globalPosition;
-        const [px,py] = [p.x,p.y];
+        const [camx,camy] = [this.camera.ox * sprite.z_1, this.camera.oy * sprite.z_1];
+        const [px,py] = [p.x + camx, p.y + camy];        
         
         const itemsize = sprite.globalScale;
-        gl.uniform2f(prog.rot_bck, Math.cos(f), Math.sin(f));
-        gl.uniform2f(prog.pos, px*this.cfx-1.,1-py*this.cfy);
+        //gl.uniform2f(prog.rot_bck, Math.cos(f), Math.sin(f));
+        gl.uniform2f(prog.rot_bck, f, f);
+        gl.uniform2f(prog.pos, px,py )//px*this.cfx-1., 1.-py*this.cfy);
         gl.uniform2f(prog.scale,tex.width*this.cfx*itemsize,tex.height*this.cfy*itemsize);
         gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]);
-        gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);
+        gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        perfmon.watch("gl",t1);
     }
 
 
@@ -217,6 +242,7 @@ class RendererWebGL {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     RenderPlanet(planet,tx){
+        const t1 = perfmon.time;
         let gl = this.gx;
         var prog = this.progs.planet;
         gl.useProgram(prog.prog);
@@ -255,11 +281,16 @@ class RendererWebGL {
         var k1 = planet.globalRotation;
         var k2 = planet.lightRotation;
         const p = planet.globalPosition;
+        const [camx,camy] = [this.camera.ox*planet.z_1, this.camera.oy*planet.z_1];
+        p.x+=camx;
+        p.y+=camy;
                 
         gl.uniform2f(prog.rot_bck, Math.cos(k1), Math.sin(k1));
         gl.uniform2f(prog.rot_lit, Math.cos(k2), Math.sin(k2));
         gl.uniform2f(prog.pos, p.x*this.cfx-1.,1-p.y*this.cfy);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);  
+
+        perfmon.watch("gl",t1);
 
         return;
         /*

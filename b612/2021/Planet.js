@@ -50,7 +50,7 @@ class BhPlanet {
 
     Update(go){                
         this.k+=this.kv;
-        const sk = (getTime() - this.kkick)/1000.0*Math.PI*2;
+        const sk = (perfmon.time - this.kkick)/1000.0*Math.PI*2;
         const s = Math.sin(sk*20)*1.0/Math.exp(sk);
         go.scale = go.orgScale * (1+s*0.1);
         go.radius = go.orgRadius * (1+s*0.1);
@@ -59,7 +59,7 @@ class BhPlanet {
     }
 
     kick(){
-        this.kkick = getTime();
+        this.kkick = perfmon.time;
     }
 }
 

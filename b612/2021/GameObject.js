@@ -1,3 +1,5 @@
+"use strict;"
+
 function _randomAngle(){
     return Math.random()*Math.PI*2
 }
@@ -13,29 +15,25 @@ class Effect {
 
 class GameObject {
 
-    static collection = []
-
-    static RenderAll(){
-        for(let go of GameObject.collection){
+    static RenderAll(collection){
+        for(let go of collection){
             go.Render();
         }
     }
 
-    static UpdateAll(){
-        for(let go of GameObject.collection){
+    static UpdateAll(collection){
+        for(let go of collection){
             go.Update();
         }
     }
 
     constructor(){
-        //this.parent = undefined;
         this.scale = 1;
         this.position = {x:0,y:0};
         this.rotation = 0;
-        this.zorder = 0;
+        this.z_1 = 1;
         this.relativeRotation = 0;
-        this.radius = -1;
-        GameObject.collection.push(this);
+        this.radius = -1;        
     }
 
     get globalScale(){
@@ -49,18 +47,14 @@ class GameObject {
     }
 
     get globalRotation(){
-        let r = this.rotation;
-        if (this.parent!==undefined){
-            r+=this.parent.globalRotation;
-        }
-        return r;
+        return this.rotation;
     }
 
     Update(){        
         if (this.behaviour!==undefined){
             const new_behaviour = this.behaviour.Update(this);
-            if (new_behaviour!==undefined){
-                this.behaviour = new_behaviour
+            if (new_behaviour!==undefined && new_behaviour!==this.behaviour){                
+                this.behaviour = new_behaviour;                
             }
         }
     }

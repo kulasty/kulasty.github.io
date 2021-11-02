@@ -1,3 +1,5 @@
+"use strict;"
+
 //const JUMP_STRENGTH = 3;
 const JUMP_STRENGTH = 6;
 const DUMP_VELOCITY = 0.999;
@@ -12,6 +14,12 @@ class EfShadow extends Effect {
         // haxor workaround
         if (go.behaviour instanceof BeaJump){
             super.Apply(go);
+            /*
+            if (go.behaviour.p2 === undefined){
+                go.renderer.cadd = [1,0,0,0];
+            }else{
+                go.renderer.cadd = [0,0,1,0];
+            }*/
             return;
         }
 
@@ -37,7 +45,7 @@ class EfShadow extends Effect {
 class EfBlink extends Effect {
     Apply(go){        
         let c = Math.cos(go.globalRotation);
-        c = Math.pow(c,100)*0.5;
+        c = Math.pow(c,100);//*0.5;
         //go.renderer.cmul = [1-c,1-c,1-c,1];
         go.renderer.cmul = [1,1,1,1];
         go.renderer.cadd = [c,c,c,0];
@@ -90,10 +98,6 @@ class BeaJump {
         this.p2 = p2;
         const k = actor.globalRotation-Math.PI*0.5;
         this.v = {x:Math.cos(k)*JUMP_STRENGTH, y:Math.sin(k)*JUMP_STRENGTH};
-
-        let line = vector(p1.globalPosition,actor.globalPosition);
-        let angle = Math.atan2(line.y,line.x);
-        //console.log("jump:",clampi(angle),"k:",clampi(k),"agr:",clampi(actor.globalRotation));
         if (p1 instanceof GoPlanet) p1.kick();
     }
     get planetLocation(){
@@ -104,52 +108,131 @@ class BeaJump {
         const p = go.globalPosition
         let x = p.x+v.x*0.5;
         let y = p.y+v.y*0.5;
-        //if (y>800 || y<0 || x<0 || x>800){
-        //    return new BeaStand(this.p1,_randomAngle());
-        //}
         if (x>800) x-=800;
         if (x<0) x+=800;
         if (y>800) y-=800;
         if (y<0) y+=800;
         go.position = {x:x,y:y};
-        let dist = vector(go.globalPosition,(this.p2||this.p1).globalPosition);
-        let d = Math.sqrt(lenSq(dist))
-        let f = {x:dist.x/d, y:dist.y/d};
+        let line = vector(go.globalPosition,(this.p2||this.p1).globalPosition);
+        let dist = Math.sqrt(lenSq(line))
+        let f = {x:line.x/dist, y:line.y/dist};
         let cf = this.p2?0.1:0.05;
         this.v.x = this.v.x*DUMP_VELOCITY + f.x*cf;
         this.v.y = this.v.y*DUMP_VELOCITY + f.y*cf;
+        if (this.p2!==undefined){
+            let angle = Math.atan2(line.y,line.x) - Math.PI*0.5;            
+            const r1 = clampi(go.rotation);
+            const r2 = clampi(angle);
+            const r2a = r2+Math.PI*2.0;
+            const r2b = r2-Math.PI*2.0;
+            const d = Math.abs(r2-r1);
+            const da = Math.abs(r2a-r1);
+            const db = Math.abs(r2b-r1);
+            let rd = r2;
+            if (da<d || db<d){
+                rd = da<db  ? r2a : r2b;
+            }
+            go.rotation = lerp(r1, rd, 0.05);
+        }
+
         
-        let min_d = 100000;
-        let target_angle = undefined;
-        for (let g of GameObject.collection){
+        let min_d = dist;
+        for (let g of Game.currentGame.objects.solid){
             if (g.radius<0) continue;
             if (g===go) continue;            
             let line = vector(g.globalPosition,go.globalPosition);
             let dist = Math.sqrt(lenSq(line));
             if (dist<=go.radius+(g.orgRadius||g.radius) && (g instanceof GoPlanet || g.behaviour instanceof BeaStand) ){
-                let angle = Math.atan2(line.y,line.x);
-                //console.log("stand:",clampi(angle));
+                let angle = Math.atan2(line.y,line.x);                
                 return new BeaStand(g,angle-g.globalRotation);
             }
             if (g!==this.p1 && g instanceof GoPlanet && dist<min_d && dist<=(go.radius+g.radius)*2){
                 min_d = dist
                 this.p2 = g;
-                let angle = Math.atan2(line.y,line.x);
-                target_angle = angle + Math.PI*0.5; //-g.globalRotation-Math.PI*2;
-                //console.log("---",g);
             }
-        }
-        if (target_angle!==undefined){
-            let r1 = clampi(go.rotation);
-            let r2 = clampi(target_angle);
-            let d1 = r2-r1;
-            let d2 = r2-Math.PI*2-r1;
-            let rd = Math.abs(d1)<Math.abs(d2)?r2:(r2-Math.PI*2);
-            go.rotation = lerp(r1, rd, 0.05);
         }
         
     }
 }
+
+class BeaJump2 {
+    constructor(actor,p1,p2){
+        this.p1 = p1;
+        this.p2 = p2;
+        const k = actor.globalRotation-Math.PI*0.5;
+        this.v = {x:Math.cos(k)*JUMP_STRENGTH, y:Math.sin(k)*JUMP_STRENGTH};
+        if (p1 instanceof GoPlanet) p1.kick();
+    }
+    get planetLocation(){
+        return this.p1;
+    }    
+    Update(go){
+        const v = this.v;
+        const p = go.globalPosition
+
+        // compute position based on velocity
+        let x = p.x+v.x*0.5;
+        let y = p.y+v.y*0.5;
+        if (x>800) x-=800;
+        if (x<0) x+=800;
+        if (y>800) y-=800;
+        if (y<0) y+=800;
+        go.position = {x:x,y:y};
+
+        // compute acceleration based on position
+        let line = vector(go.globalPosition,(this.p2||this.p1).globalPosition);
+        let dist = Math.sqrt(lenSq(line))
+        let f = {x:line.x/dist, y:line.y/dist};
+        let cf = (this.p2===undefined)?0.1:0.05;
+        this.v.x = this.v.x*DUMP_VELOCITY + f.x*cf;
+        this.v.y = this.v.y*DUMP_VELOCITY + f.y*cf;
+
+        // compute orientation based on target
+        if (this.p2!==undefined){
+            let angle = Math.atan2(line.y,line.x) - Math.PI*0.5;       
+            const r1 = clampi(go.rotation);
+            const r2 = clampi(angle);
+            const r2a = r2+Math.PI*2.0;
+            const r2b = r2-Math.PI*2.0;
+            const d = Math.abs(r2-r1);
+            const da = Math.abs(r2a-r1);
+            const db = Math.abs(r2b-r1);
+            let rd = r2;
+            if (da<d || db<d){
+                rd = da<db ? r2a : r2b;
+            }            
+            go.rotation = lerp(r1, rd, 0.05);
+        }
+
+
+        // find future acceleration        
+        let min_d = dist;   
+        let target_angle = undefined;
+        for (let g of Game.currentGame.objects.solid){
+            // ignore objects with radius below 0
+            if (g.radius<0) continue;
+            // ignore objects that are that particular that we are moving
+            if (g===go) continue;
+
+            let line = vector(g.globalPosition,go.globalPosition);
+            let dist = Math.sqrt(lenSq(line)) - (g.orgRadius||g.radius);
+
+            // check if we have touchdown
+            if (dist<=go.radius && (g instanceof GoPlanet || g.behaviour instanceof BeaStand) ){
+                let angle = Math.atan2(line.y,line.x);                
+                return new BeaStand(g,angle-g.globalRotation);
+            }
+
+            // check if this is new acceleration source
+            if (g!==this.p1 && g instanceof GoPlanet && dist<min_d){
+                min_d = dist
+                this.p2 = g;
+            }
+        }
+        
+    }
+}
+
 
 function lerp(a,b,c){
     return a*(1.0-c)+b*c;

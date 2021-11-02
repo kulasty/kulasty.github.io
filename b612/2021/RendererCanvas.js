@@ -1,3 +1,4 @@
+"use strict;"
 
 function _createGraphics2d(width, height)
 {

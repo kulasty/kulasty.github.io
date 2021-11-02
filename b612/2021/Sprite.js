@@ -1,3 +1,5 @@
+"use strict;"
+
 class RenderSprite {
     constructor(textureName){
         this.textureName = textureName;
