@@ -1,4 +1,4 @@
-"use strict;"
+"use strict";
 
 function _createGraphics2d(width, height)
 {
@@ -24,8 +24,8 @@ function _bakePlanet(planet){
     canvas.height = height;
 	let gx = canvas.getContext("2d");
                 
-    px = width/2;
-    py = height/2;
+    const px = width/2;
+    const py = height/2;
 
     //gx.fillStyle = "#f00";//"#abf";
     //gx.fillRect(0,0,width,height);

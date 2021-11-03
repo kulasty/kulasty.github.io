@@ -1,3 +1,5 @@
+"use strict";
+
 class RenderPlanet {
     static instance = new RenderPlanet();
 
@@ -31,9 +33,9 @@ class RenderPlanet {
     
     Render(go){
         if (this.tex===undefined){
-            this.tex = xgl_createTexture(rx.gx,_bakePlanet(this));
+            this.tex = xgl_createTexture(renderContext.gx,_bakePlanet(this));
         }
-        rx.RenderPlanet(go,this.tex);
+        renderContext.RenderPlanet(go,this.tex); // FIXME
     }
 }
 
@@ -41,7 +43,7 @@ class BhPlanet {
     static instance = new BhPlanet();
 
     constructor(){
-        this.k = _randomAngle();         
+        this.k = MathEx.randomAngle();         
         let ksign = Math.random()>0.5?-1.0:1.0;
         this.kv = (1.0+Math.random())*0.01*ksign; 
         this.ks = ksign;
@@ -69,7 +71,7 @@ class GoPlanet extends GameObject {
         super();
         Math.seedrandom(seed);        
         this.position = {x:px, y:py};
-        this.radius = randRange(110-50,110)*0.5;
+        this.radius = MathEx.randRange(110-50,110)*0.5;
         this.orgScale = this.radius/110.0;
         this.orgRadius = this.radius;
         this.scale = this.orgScale;

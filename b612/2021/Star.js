@@ -1,4 +1,4 @@
-"use strict;"
+"use strict";
 
 class EfStar extends Effect {
     static instance = new EfStar();

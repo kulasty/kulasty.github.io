@@ -1,4 +1,4 @@
-"use strict;"
+"use strict";
 
 var txr2d = {
     planet: _createTexture("backdisk.png"),

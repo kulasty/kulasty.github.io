@@ -1,3 +1,5 @@
+"use strict";
+
 class Oracle {
 
     static getJumpPathPrediction(go,duration,dt){

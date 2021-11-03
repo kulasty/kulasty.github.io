@@ -1,4 +1,4 @@
-"use strict;"
+"use strict";
 
 class RenderSprite {
     constructor(textureName){
@@ -7,6 +7,6 @@ class RenderSprite {
         this.cadd = [0,0,0,0];
     }
     Render(go){
-       rx.RenderSprite(go,rx.texas[this.textureName],this.cmul,this.cadd);
+       renderContext.RenderSprite(go,renderContext.texas[this.textureName],this.cmul,this.cadd); // FIXME
     }
 }

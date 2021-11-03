@@ -1,4 +1,4 @@
-"use strict;"
+"use strict";
 
 class Camera {
 
@@ -16,8 +16,8 @@ class Camera {
         }
         let oo = target.globalPosition;
         const cf = this.cf;
-        this.ox = lerp(this.ox,-(oo.x-400),cf);
-        this.oy = lerp(this.oy,-(oo.y-400),cf);
+        this.ox = MathEx.lerp(this.ox,-(oo.x-400),cf);
+        this.oy = MathEx.lerp(this.oy,-(oo.y-400),cf);
         this.cf = Math.min(this.cf+0.001,0.1);
     }
 

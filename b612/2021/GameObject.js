@@ -1,9 +1,4 @@
-"use strict;"
-
-function _randomAngle(){
-    return Math.random()*Math.PI*2
-}
-
+"use strict";
 
 class Effect {
     static instance = new Effect();
