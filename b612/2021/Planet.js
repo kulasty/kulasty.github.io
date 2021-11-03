@@ -35,7 +35,7 @@ class RenderPlanet {
         if (this.tex===undefined){
             this.tex = xgl_createTexture(renderContext.gx,_bakePlanet(this));
         }
-        renderContext.RenderPlanet(go,this.tex); // FIXME
+        renderContext.RenderPlanet(go,this.tex,V4_SOLIDWHITE,V4_TRANSBLACK); // FIXME
     }
 }
 
@@ -78,6 +78,17 @@ class GoPlanet extends GameObject {
         this.renderer = new RenderPlanet();
         this.behaviour = new BhPlanet();
         this.lightRotation = 0;
+
+        this.eventHandlers[GameEvent.TOUCHDOWN] = [
+            function(that){
+                that.kick();
+            }
+        ];
+        this.eventHandlers[GameEvent.JUMP] = [
+            function(that){
+                that.kick();
+            }
+        ];
     }
     kick(){
         this.behaviour.kick();

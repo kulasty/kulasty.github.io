@@ -11,7 +11,11 @@
 
 <style>
     *{margin:0; padding:0; background-color: black; font-family:'Courier New', Courier, monospace}
-    .display{
+    #display{
+        width: 100vmin;
+        height:100vmin;
+        display:block;
+        margin:auto;
     }
     .crisp{
         image-rendering:pixelated;    
@@ -27,6 +31,8 @@
 <script src="seedrandom.js"> </script>
 
 <!-- game code -->
+<script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+
 <script src="MathEx.js"></script>
 <script src="perfmon.js"></script>
 <script src="Camera.js"></script>
@@ -45,6 +51,24 @@
 "use strict";
 
 var renderContext = undefined;
+const RM_HIRES = "hires";
+const RM_RETRO = "retro";
+var renderMode = RM_HIRES;
+
+function setRenderMode(mode){    
+    if (mode==renderMode){
+        return;
+    }
+    console.log("setRenderMode",mode)
+    renderMode = mode;
+    if (mode==RM_HIRES){        
+        setRes(1600,1600,false);        
+    }
+    if (mode==RM_RETRO){        
+        setRes(128,128,true);
+    }
+}
+
 
 var planets = [];
 var stars = [];
@@ -90,7 +114,8 @@ function make_stars(){
 
 }    
 
-var camera = new Camera(1);
+var cam_back = new Camera(0);
+var cam_front = new Camera(0);
 var game = new Game();
 Game.currentGame = game;
 
@@ -111,13 +136,7 @@ function render(){
             const t = mouse;
             p.lightRotation = Math.PI*0.7+Math.atan2(t.y-pos.y,t.x-pos.x);
         }
-    }    
-
-    if (getPlanet(player)===getPlanet(retro) || getPlanet(player)===retro){
-        setRes(128,128);        
-    }else{
-        setRes(800,800);        
-    }
+    }       
 
 
     if (renderContext.BeginScene()){
@@ -128,8 +147,17 @@ function render(){
         }
         */
 
-        renderContext.camera = camera;
+        //camera.opacity = 1.;
+        let cam_target = getPlanet(player);
+        if (player.behaviour instanceof BeaJump){
+            cam_target = player;
+        }
+        cam_back.setTarget(player);
+                
+        renderContext.camera = cam_back;
         GameObject.RenderAll(game.objects.background);
+                
+        renderContext.camera = cam_front;
         GameObject.RenderAll(game.objects.solid);        
 
         renderContext.EndScene();
@@ -156,13 +184,16 @@ let prince, fox, sheep, box, scarf, bush, star;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function physics(dt){
-    time_to_use=Math.min(300,time_to_use+dt);
+    time_to_use=Math.max(Math.min(300,time_to_use+dt),0);
     while(time_to_use>time_step){
         let t1 = perfmon.time;
         time_to_use-=time_step;
         
         GameObject.UpdateAll(game.objects.solid);
         GameObject.UpdateAll(game.objects.background);
+        for(let go of game.objects.solid){
+            go.DispatchAll();
+        }
 
         if (rose!==undefined){            
             if (rose===getPlanet(player)){
@@ -185,7 +216,8 @@ function physics(dt){
                 cam_target = player.behaviour.p2 || player.behaviour.p1;
             }    
             //camera.setTarget(cam_target);
-            camera.Update();
+            cam_front.Update();
+            cam_back.Update();
         }
 
 
@@ -213,6 +245,8 @@ function animationFrame(timestamp){
         }   
         { 
             const dt = ts2-ts1;
+            let cfdt = Math.sin(perfmon.time*0.001);
+            //cfdt*=cfdt;
             physics(dt);
             tr=Math.min(120,tr+dt);
             while(tr>MS_PER_FRAME){
@@ -227,7 +261,6 @@ function animationFrame(timestamp){
             if (dt>1000){
                 const metrics = perfmon.metrics;
                 // structure of one second of the game:
-                // total_rx(total_gl) total_ph
                 const time_in_frame = PerfMon.sum(metrics.ph) + PerfMon.sum(metrics.rx);
                 const time_in_glx = PerfMon.sum(metrics.gl);
                 const time_in_rdx = PerfMon.sum(metrics.rx);
@@ -236,19 +269,11 @@ function animationFrame(timestamp){
                 const pphy = time_in_phy*100/time_in_frame;
                 const prdx = time_in_rdx*100/time_in_frame;
                 const pglx = time_in_glx*100/time_in_rdx;
-
-                document.getElementById("fps").innerHTML = `CPU:${szround(pload,100)}% R:${szround(prdx,100)}% (${szround(pglx,100)}%) P:${szround(pphy,100)}%`
-
-                /*
-                const ft = average(metrics.rx);
-                const pt = average(metrics.ph);
-                const tt = average(metrics.ts);
-                const gt = average(metrics.gl);
-                const aft = (sum(perfmon.metrics.ph) + sum(perfmon.metrics.rx))/dt;
-                const load = Math.round( 100.0*100.0*aft )/100.0;
-                document.getElementById("fps").innerHTML = `${tt}us -- r:${ft}us (${metrics.rx.length}) g:${gt}us (${metrics.gl.length}) p:${pt}us (${metrics.ph.length}) ${load}%`;
-                */
-
+                if (pload>0){
+                    document.getElementById("fps").innerHTML = `CPU:${szround(pload,100)}% R:${szround(prdx,100)}% (${szround(pglx,100)}%) P:${szround(pphy,100)}%`
+                }else{
+                    document.getElementById("fps").innerHTML = '';
+                }
 
                 perfmon.reset();
                 tsecond = perfmon.time;
@@ -345,7 +370,24 @@ function make_demo(){
     star.spawnAtPlanet(planets[planets.length-4],MathEx.randomAngle());
 
     player = star;
-
+    player.addHandler(GameEvent.JUMP,function(){
+        navigator.vibrate(30);
+        synth.triggerAttack("C3");
+        
+    });
+    player.addHandler(GameEvent.TOUCHDOWN,function(that){
+        navigator.vibrate(30);
+        synth.triggerRelease();
+        
+        let planet = getPlanet(that);
+        if (planet===getPlanet(retro) || planet===retro){
+            let mode = RM_HIRES;
+            if (renderMode == mode) mode = RM_RETRO;
+            setRenderMode(mode);
+        }    
+    });
+    
+    
     GameObject.UpdateAll(game.objects.solid);
 
     ai_random(fox);
@@ -365,10 +407,49 @@ function make_intro(){
     player = prince;
 }
 
+const synth = new Tone.AMSynth({
+			harmonicity: 2.5,
+			oscillator: {
+				type: "fatsawtooth"
+			},
+			envelope: {
+				attack: 0.1,
+				decay: 0.2,
+				sustain: 0.2,
+				release: 2 // 0.3
+			},
+			modulation: {
+				type: "square"
+			},
+			modulationEnvelope: {
+				attack: 0.5,
+				decay: 0.01
+			}
+		}).toDestination();
+
+
+const bgsynth = new Tone.AMSynth({
+			harmonicity: 2.5,
+			oscillator: {
+				type: "fatsawtooth"
+			},
+			envelope: {
+				attack: 0.1,
+				decay: 0.2,
+				sustain: 0.2,
+				release: 2 // 0.3
+			},
+			modulation: {
+				type: "square"
+			},
+			modulationEnvelope: {
+				attack: 0.5,
+				decay: 0.01
+			}
+		}).toDestination();
+
 function main(){
     console.log("main().enter")
-
-
     renderContext = new RendererWebGL(800,800);
 
     let tick = new Date().now;    
@@ -382,7 +463,8 @@ function main(){
     });    
 
     animationFrame();
-    setRes(800,800);
+
+    setRes(1600,1600,false); // FIXME
 
     //var go = new GameObject();
     //go.renderer = new RenderSprite("planet");
@@ -439,6 +521,9 @@ function toggleFullScreen() {
 
 document.onclick = function(){
     player.jump();
+    //bgsynth.triggerAttack("C2");
+    //bgsynth.triggerAttack("E2");
+    //bgsynth.triggerAttack("G2");
 }
 
 document.ondblclick = function(){
@@ -451,14 +536,14 @@ document.onmousemove = function(e){
     mouse = {x:e.offsetX, y:e.offsetY};
 }
 
-function setRes(sx,sy){
+function setRes(sx,sy,crisp){
     let canvas = document.getElementById("display");    
     canvas.width = sx;
     canvas.height= sy;
-    if (sx==800){
-        canvas.classList.remove("crisp");
-    }else{
+    if (crisp){
         canvas.classList.add("crisp");
+    }else{
+        canvas.classList.remove("crisp");
     }
     renderContext.gx.viewport(0,0,sx,sy);
 }
@@ -468,7 +553,7 @@ function setRes(sx,sy){
 
 <body onload="main()">
     <span id="fps" style="position:absolute;top:0;left:0;color:white">Loading...</span>
-    <canvas id="display" style="width:800px; height:800px;"></canvas>
+    <canvas id="display"></canvas>
     <br>
     <button id="toggle_fullscreen" class="pac" onclick="toggleFullScreen()">Full Screen</button>
     <!--

@@ -53,11 +53,23 @@ class EfBlink extends Effect {
 }
 
 class BeaStand {
-    constructor(planet,angle){
+    constructor(actor,planet,angle){
         //log("BeaStand",planet);
         this.angle = angle;
         this.planet = planet;
+
+        // FIXME
+        /*
         if (planet instanceof GoPlanet) planet.kick();
+        try{
+            synth.triggerRelease();
+            navigator.vibrate(30);
+        }catch{}
+        */
+
+
+        planet.Schedule(GameEvent.TOUCHDOWN);
+        actor.Schedule(GameEvent.TOUCHDOWN);
     }
     Update(go){
         const planet = this.planet;
@@ -85,7 +97,17 @@ class BeaJump {
         this.p2 = p2;
         const k = actor.globalRotation-PI05;
         this.v = {x:Math.cos(k)*JUMP_STRENGTH, y:Math.sin(k)*JUMP_STRENGTH};
+
+        // FIXME
+        /*
         if (p1 instanceof GoPlanet) p1.kick();
+        synth.triggerAttack("C1",0);
+        navigator.vibrate(30);
+        */
+
+        actor.Schedule(GameEvent.JUMP);
+        let planet = getPlanet(actor)
+        if (planet instanceof GoPlanet) planet.Schedule(GameEvent.JUMP);
     }
     get planetLocation(){
         return this.p1;
@@ -131,7 +153,7 @@ class BeaJump {
             let dist = MathEx.vlength(line);
             if (dist<=go.radius+(g.orgRadius||g.radius) && (g instanceof GoPlanet || g.behaviour instanceof BeaStand) ){
                 let angle = Math.atan2(line.y,line.x);                
-                return new BeaStand(g,angle-g.globalRotation);
+                return new BeaStand(go,g,angle-g.globalRotation);
             }
             if (g!==this.p1 && g instanceof GoPlanet && dist<min_d && dist<=(go.radius+g.radius)*2){
                 min_d = dist
@@ -207,7 +229,7 @@ class BeaJump2 {
             // check if we have touchdown
             if (dist<=go.radius && (g instanceof GoPlanet || g.behaviour instanceof BeaStand) ){
                 let angle = Math.atan2(line.y,line.x);                
-                return new BeaStand(g,angle-g.globalRotation);
+                return new BeaStand(go,g,angle-g.globalRotation);
             }
 
             // check if this is new acceleration source
@@ -230,7 +252,7 @@ class GoActor extends GameObject {
         this.effect = EfShadow.instance;
     }
     spawnAtPlanet(planet,angle){        
-        this.behaviour = new BeaStand(planet,angle);
+        this.behaviour = new BeaStand(this,planet,angle);
     }
     jump(){ 
         this.jumpTo(undefined);

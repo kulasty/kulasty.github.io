@@ -3,8 +3,8 @@
 class RenderSprite {
     constructor(textureName){
         this.textureName = textureName;
-        this.cmul = [1,1,1,1];
-        this.cadd = [0,0,0,0];
+        this.cmul = V4_SOLIDWHITE;
+        this.cadd = V4_TRANSBLACK;
     }
     Render(go){
        renderContext.RenderSprite(go,renderContext.texas[this.textureName],this.cmul,this.cadd); // FIXME

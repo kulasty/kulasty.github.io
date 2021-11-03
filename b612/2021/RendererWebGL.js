@@ -10,8 +10,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 function _createGraphics3d(width, height){
-    width = 200;
-    height = 200;
 	let canvas = document.getElementById("display");    
     canvas.width = width;
     canvas.height = height;
@@ -31,13 +29,6 @@ function _createGraphics3d(width, height){
         }
     }     
     
-     /*
-	let gl = canvas.getContext("webgl2",{
-        antialias: true,
-        premultipliedAlpha: false,
-    });
-    */
-
     gl.viewport(0,0,width,height);    
 
     return gl;
@@ -76,6 +67,7 @@ function xgl_makeProgram(gl,vsh,fsh){
     params.pos = gl.getUniformLocation(prog,"pos");
     params.cmul = gl.getUniformLocation(prog,"cmul");
     params.cadd = gl.getUniformLocation(prog,"cadd");
+    params.ftime = gl.getUniformLocation(prog,"ftime");
 
     let tex_bck = gl.getUniformLocation(prog,"tex_bck"); // always TEXTURE0
     let tex_lit = gl.getUniformLocation(prog,"tex_lit"); // always TEXUTRE1
@@ -192,6 +184,7 @@ class RendererWebGL {
         }
         let gl = this.gx;
         gl.clear(gl.COLOR_BUFFER_BIT);	
+        this.ftime = perfmon.time*0.001;
         return true;
     }
 
@@ -214,74 +207,29 @@ class RendererWebGL {
         gl.uniform2f(prog.rot_bck, f, f);
         gl.uniform2f(prog.pos, px,py )//px*this.cfx-1., 1.-py*this.cfy);
         gl.uniform2f(prog.scale,tex.width*this.cfx*itemsize,tex.height*this.cfy*itemsize);
-        gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]);
+        gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
         gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
+        gl.uniform1f(prog.ftime,this.ftime);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         perfmon.watch("gl",t1);
     }
 
-
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    _RenderStar(star){       
-        let gl = this.gx;
-        var prog = this.progs.sprite;                
-        gl.useProgram(prog.prog);
-
-        var tex = this.texas["star"];        
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, tex.tex);
-
-        var f = star.globalRotation;
-        
-        var p = star.globalPosition;
-        var [px,py] = [p.x,p.y];
-        
-        const itemsize = star.globalScale*0.5; // as .cf{x,y} is only half of the viewport
-        gl.uniform2f(prog.rot_bck, Math.cos(f), Math.sin(f));
-        gl.uniform2f(prog.pos, px*this.cfx-1.,1-py*this.cfy);
-        gl.uniform2f(prog.scale,tex.width*this.cfx*itemsize,tex.height*this.cfy*itemsize);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);      
-        
-    }
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    RenderPlanet(planet,tx){
+    RenderPlanet(planet,tex,cmul,cadd){
         const t1 = perfmon.time;
+
         let gl = this.gx;
         var prog = this.progs.planet;
         gl.useProgram(prog.prog);
 
-        // set planetoid texture "as-backed"
         gl.activeTexture(gl.TEXTURE0);
-        /*
-        const hash = planet.planet.hash;
-        var tx = this.$texas["planet-"+hash]
-        if (tx===undefined){
-            tx = this.texas["planet"];
-            this.$texas["planet-"+hash] = xgl_createTexture(gl,_bakePlanet(planet.planet));
-        }*/
-        //var tx = this.texas["planet"];
-        gl.bindTexture(gl.TEXTURE_2D, tx.tex);
-        
-        
-        //let sk = planet.k-planet.kick;
-        //let s = Math.sin(sk*20.0)*0.15*1.0/Math.exp(sk*2);
-        //var r = (1+planet.r)*0.15*(1+s);
-        //var fx = 256*this.cfx*r;
-        //var fy = 256*this.cfy*r;
+        gl.bindTexture(gl.TEXTURE_2D, tex.tex);      
         
         const itemsize = planet.scale;
-        gl.uniform2f(prog.scale,tx.width*this.cfx*itemsize,tx.height*this.cfy*itemsize);
+        gl.uniform2f(prog.scale,tex.width*this.cfx*itemsize,tex.height*this.cfy*itemsize);
+        gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
+        gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
         
-    
-        //var k = planet.k*planet.ks;
-
-        //var px = planet.p.x + Math.cos(s*Math.PI*10)*3;
-        //var py = planet.p.y  + Math.sin(s*Math.PI*10)*3;
-
-        //var klight=Math.PI*0.7+Math.atan2(mouse.y-planet.p.y,mouse.x-planet.p.x);
-
-
         var k1 = planet.globalRotation;
         var k2 = planet.lightRotation;
         const p = planet.globalPosition;
@@ -297,36 +245,6 @@ class RendererWebGL {
         perfmon.watch("gl",t1);
 
         return;
-        /*
-        var prog = this.progs.sprite;
-        gl.useProgram(prog.prog);
-        
-
-        // for items use always TEXTURE2
-        gl.activeTexture(gl.TEXTURE2);
-
-        const itemsize = 0.8;
-
-        for(let i in planet.items){
-
-            let o = planet.items[i];
-            let tex = this.texas[o[0]];
-            gl.bindTexture(gl.TEXTURE_2D, tex.tex);    
-            var f = o[1]+k
-                
-            let ix = px + (r*105+tex.height*0.5*itemsize)*Math.cos(f);
-            let iy = py + (r*105+tex.height*0.5*itemsize)*Math.sin(f);
-            ix = ix*this.cfx-1.;
-            iy = 1.-iy*this.cfx;
-            
-            gl.uniform2f(prog.rot_bck, Math.cos(f+Math.PI*0.5), Math.sin(f+Math.PI*0.5));
-            gl.uniform2f(prog.pos, ix, iy);
-            gl.uniform2f(prog.scale,tex.width*this.cfx*itemsize,tex.height*this.cfy*itemsize);
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);      
-        
-        }
-        */
-
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -1,11 +1,19 @@
 "use strict";
 
+const V4_SOLIDWHITE = [1,1,1,1];
+const V4_TRANSBLACK = [0,0,0,0];
+
 class Effect {
     static instance = new Effect();
     Apply(go){
-        go.renderer.cmul = [1,1,1,1];
-        go.renderer.cadd = [0,0,0,0];
+        go.renderer.cmul = V4_SOLIDWHITE;
+        go.renderer.cadd = V4_TRANSBLACK;
     }
+}
+
+class GameEvent {
+    static TOUCHDOWN = "touchdown";
+    static JUMP = "jump";
 }
 
 class GameObject {
@@ -29,6 +37,9 @@ class GameObject {
         this.z_1 = 1;
         this.relativeRotation = 0;
         this.radius = -1;        
+        this.eventHandlers = {}
+        this.effect = Effect.instance;
+        this.queue = []
     }
 
     get globalScale(){
@@ -43,6 +54,44 @@ class GameObject {
 
     get globalRotation(){
         return this.rotation;
+    }
+
+    Schedule(event_type, event_params){
+        this.queue.push([event_type,event_params]);
+    }
+
+    DispatchAll(){
+        while(this.queue.length){
+            let [event_type,event_params] = this.queue.shift();
+            this.Handle(event_type, event_params);
+        }
+    }
+
+    Handle(event_type, event_params){
+        let eventHandler = this.eventHandlers[event_type];
+        if (eventHandler === undefined){
+            return;
+        }
+        if (eventHandler instanceof Array){
+        }else{
+            eventHandler = [eventHandler];
+        }
+        for(let eh of eventHandler){
+            try{
+                eh(this,event_params);
+            }catch(e){
+                console.log(event_type,eh,e)
+            }
+        }
+    }
+
+    addHandler(event_type, foo){
+        let eventHandler = this.eventHandlers[event_type];
+        if (eventHandler === undefined){
+            this.eventHandlers[event_type] = [foo];
+        }else{
+            eventHandler.push(foo);
+        }        
     }
 
     Update(){        
