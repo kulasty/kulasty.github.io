@@ -14,12 +14,7 @@ class EfShadow extends Effect {
         // haxor workaround
         if (go.behaviour instanceof BeaJump){
             super.Apply(go);
-            /*
-            if (go.behaviour.p2 === undefined){
-                go.renderer.cadd = [1,0,0,0];
-            }else{
-                go.renderer.cadd = [0,0,1,0];
-            }*/
+            go.renderer.blur = 0.6;
             return;
         }
 
@@ -32,12 +27,14 @@ class EfShadow extends Effect {
             let c1 = 1.0-c;
             go.renderer.cmul = [c,c,c,1];
             go.renderer.cadd = [CLR_SHADOW[0]*c1,CLR_SHADOW[1]*c1,CLR_SHADOW[2]*c1,0];
+            go.renderer.blur = 0.;
         }
 
         // once standing on another actor - steal its look
         if (planet instanceof GoActor){
             go.renderer.cmul = planet.renderer.cmul;
             go.renderer.cadd = planet.renderer.cadd;
+            go.renderer.blur = 0.;
         }
     }
 }
@@ -228,7 +225,7 @@ class GoActor extends GameObject {
     constructor(name){
         super();        
         this.name = name;
-        this.renderer = new RenderSprite(name);
+        this.renderer = new RenderSprite(name);        
         this.scale = 0.7;
         this.height = renderContext.texas[name].height*this.scale; // FIXME
         this.radius = this.height*0.5;

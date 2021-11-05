@@ -8,6 +8,7 @@ class Effect {
     Apply(go){
         go.renderer.cmul = V4_SOLIDWHITE;
         go.renderer.cadd = V4_TRANSBLACK;
+        go.renderer.blur = 0.;
     }
 }
 

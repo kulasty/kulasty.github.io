@@ -76,7 +76,7 @@ function setRenderMode(mode){
     console.log("setRenderMode",mode)
     renderMode = mode;
     if (mode==RM_HIRES){        
-        setRes(1600,1600,false);        
+        setRes(1024,1024,false);        
     }
     if (mode==RM_RETRO){        
         setRes(128,128,true);
@@ -594,7 +594,7 @@ const bgsynth = new Tone.AMSynth({
 function main(){
 
     console.log("main().enter")
-    renderContext = new RendererWebGL(800,800);
+    renderContext = new RendererWebGL(800,800); // FIXME 800
 
     let tick = new Date().now;    
     Promise.all([
@@ -603,13 +603,17 @@ function main(){
         fetch('assets/sprite.vsh.glsl?'+tick).then(x=>x.text()),
         fetch('assets/sprite.fsh.glsl?'+tick).then(x=>x.text()),
         fetch('assets/glow.vsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/glow.fsh.glsl?'+tick).then(x=>x.text())
-    ]).then(([planet_vsh,planet_fsh,sprite_vsh,sprite_fsh,glow_vsh,glow_fsh]) => {
-        let programs = [
-            ['planet', planet_vsh, planet_fsh],
-            ['sprite', sprite_vsh, sprite_fsh],
-            ['glow'  , glow_vsh  , glow_fsh],
-        ]        
+        fetch('assets/glow.fsh.glsl?'+tick).then(x=>x.text()),
+        fetch('assets/fullscreen.vsh.glsl?'+tick).then(x=>x.text()),
+        fetch('assets/fse_pass.fsh.glsl?'+tick).then(x=>x.text()),
+        fetch('assets/fullscreen.vsh.glsl?'+tick).then(x=>x.text()),
+        fetch('assets/fse_accu.fsh.glsl?'+tick).then(x=>x.text())
+    ]).then((res) => {
+        let pnames = ['planet','sprite','glow','fse_pass','fse_accu'];
+        let programs = [];
+        for(let i=0;i<pnames.length;i++){
+            programs.push([pnames[i],res[i*2],res[i*2+1]]);
+        }
         renderContext.prepstage(programs);        
     });    
 
@@ -618,7 +622,7 @@ function main(){
         document.body.appendChild( stats.dom );    
     }
 
-    setRes(1600,1600,false); // FIXME
+    setRes(800,800,false); // FIXME
 
     //var go = new GameObject();
     //go.renderer = new RenderSprite("planet");
@@ -701,7 +705,7 @@ function setRes(sx,sy,crisp){
     }else{
         canvas.classList.remove("crisp");
     }
-    renderContext.gx.viewport(0,0,sx,sy);
+    renderContext.rt_screen.vp = {sx:sx,sy:sy};
 }
 
 </script>
