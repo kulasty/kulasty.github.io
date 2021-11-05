@@ -121,21 +121,14 @@ class RendererWebGL {
         //gl.clearColor(0xaa/0xff,0xbb/0xff,1,1);
         gl.clearColor(0,0,0,1);
         gl.disable(gl.DEPTH_TEST);        
-    
-        let tx_bck = xgl_createTexture(gl,txr2d.planet);
-        this.texas["planet"] = tx_bck;
-        let tx_lit = xgl_createTexture(gl,txr2d.light);
-        this.texas["prince"] = xgl_createTexture(gl,txr2d.prince2);    
-        this.texas["rose"]   = xgl_createTexture(gl,txr2d.rose);    
-        this.texas["fox"]    = xgl_createTexture(gl,txr2d.fox);    
-        this.texas["sheep"]  = xgl_createTexture(gl,txr2d.sheep);    
-        this.texas["star"]   = xgl_createTexture(gl,txr2d.star);    
-        this.texas["box"]   = xgl_createTexture(gl,txr2d.box);    
-        this.texas["retro"]   = xgl_createTexture(gl,txr2d.retro);    
-        this.texas["bg"]   = xgl_createTexture(gl,txr2d.bg);    
-        this.texas["scarf"]   = xgl_createTexture(gl,txr2d.scarf);    
-        this.texas["bush"]   = xgl_createTexture(gl,txr2d.bush);    
 
+        for(let txr in txr2d){
+            console.log(`WebGL.TXR(${txr})`);
+            this.texas[txr] = xgl_createTexture(gl,txr2d[txr]);
+        }
+        let tx_bck = this.texas.planet;
+        let tx_lit = this.texas.light;   
+    
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, tx_bck.tex);
 

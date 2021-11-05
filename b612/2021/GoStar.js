@@ -25,7 +25,7 @@ class GoStar extends GameObject {
     static Renderer = new RenderSprite("star");
     constructor(){
         super();        
-        this.renderer = new RenderSprite("star");
+        this.renderer = GoStar.Renderer; //new RenderSprite("star");
         this.behaviour = BhStar.instance;
         this.effect = EfStar.instance;
         this.k = 0;

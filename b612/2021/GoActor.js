@@ -58,18 +58,8 @@ class BeaStand {
         this.angle = angle;
         this.planet = planet;
 
-        // FIXME
-        /*
-        if (planet instanceof GoPlanet) planet.kick();
-        try{
-            synth.triggerRelease();
-            navigator.vibrate(30);
-        }catch{}
-        */
-
-
-        planet.Schedule(GameEvent.TOUCHDOWN);
-        actor.Schedule(GameEvent.TOUCHDOWN);
+        planet.Schedule(GameEvent.TOUCHDOWN,{msg:"as_planet"});
+        actor.Schedule(GameEvent.TOUCHDOWN,{msg:"as_actor"});
     }
     Update(go){
         const planet = this.planet;
@@ -78,7 +68,7 @@ class BeaStand {
         const x = planet.globalPosition.x+Math.cos(k)*r;
         const y = planet.globalPosition.y+Math.sin(k)*r;
         go.position = {x:x,y:y};
-        go.rotation = k+Math.PI*0.5;        
+        go.rotation = k+PI05;
         if (planet instanceof GoActor){
             if (getPlanet(planet)===go){
                 return new BeaJump(go,planet,undefined);
@@ -87,23 +77,15 @@ class BeaStand {
     }
     get planetLocation(){
         return this.planet;
-    }    
+    }        
 }
 
 class BeaJump {
-    constructor(actor,p1,p2){
-        //console.log("BeaJump",actor,p1,p2);
+    constructor(actor,p1,p2){        
         this.p1 = p1;
         this.p2 = p2;
-        const k = actor.globalRotation-PI05;
+        const k = actor.globalRotation-PI05; // "restore" actual rotation in space
         this.v = {x:Math.cos(k)*JUMP_STRENGTH, y:Math.sin(k)*JUMP_STRENGTH};
-
-        // FIXME
-        /*
-        if (p1 instanceof GoPlanet) p1.kick();
-        synth.triggerAttack("C1",0);
-        navigator.vibrate(30);
-        */
 
         actor.Schedule(GameEvent.JUMP);
         let planet = getPlanet(actor)
@@ -112,28 +94,28 @@ class BeaJump {
     get planetLocation(){
         return this.p1;
     }    
-    Update(go){
-        const v = this.v;
+    Update(go){        
         const p = go.globalPosition
-        let x = p.x+v.x*0.5;
-        let y = p.y+v.y*0.5;
-        if (x>800) x-=800;
-        if (x<0) x+=800;
-        if (y>800) y-=800;
-        if (y<0) y+=800;
+
+        // compute new position based on velocity
+        let x = p.x+this.v.x*0.5;
+        let y = p.y+this.v.y*0.5;
+        if (x>800) x-=800; else if (x<0) x+=800;
+        if (y>800) y-=800; else if (y<0) y+=800;
         go.position = {x:x,y:y};
-        let line = MathEx.vector(go.globalPosition,(this.p2||this.p1).globalPosition);
+
+        let line = MathEx.vector(p,(this.p2||this.p1).globalPosition);
         let dist = MathEx.vlength(line);
         let f = {x:line.x/dist, y:line.y/dist};
         let cf = this.p2?0.1:0.05;
         this.v.x = this.v.x*DUMP_VELOCITY + f.x*cf;
         this.v.y = this.v.y*DUMP_VELOCITY + f.y*cf;
         if (this.p2!==undefined){
-            let angle = Math.atan2(line.y,line.x) - Math.PI*0.5;            
+            let angle = Math.atan2(line.y,line.x) - PI05
             const r1 = MathEx.clampi(go.rotation);
             const r2 = MathEx.clampi(angle);
-            const r2a = r2+Math.PI*2.0;
-            const r2b = r2-Math.PI*2.0;
+            const r2a = r2+PI2;
+            const r2b = r2-PI2;
             const d = Math.abs(r2-r1);
             const da = Math.abs(r2a-r1);
             const db = Math.abs(r2b-r1);
@@ -143,7 +125,6 @@ class BeaJump {
             }
             go.rotation = MathEx.lerp(r1, rd, 0.05);
         }
-
         
         let min_d = dist;
         for (let g of Game.currentGame.objects.solid){
@@ -168,7 +149,7 @@ class BeaJump2 {
     constructor(actor,p1,p2){
         this.p1 = p1;
         this.p2 = p2;
-        const k = actor.globalRotation-Math.PI*0.5;
+        const k = actor.globalRotation-PI05;
         this.v = {x:Math.cos(k)*JUMP_STRENGTH, y:Math.sin(k)*JUMP_STRENGTH};
         if (p1 instanceof GoPlanet) p1.kick();
     }
@@ -198,11 +179,11 @@ class BeaJump2 {
 
         // compute orientation based on target
         if (this.p2!==undefined){
-            let angle = Math.atan2(line.y,line.x) - Math.PI*0.5;       
+            let angle = Math.atan2(line.y,line.x) - PI05;
             const r1 = MathEx.clampi(go.rotation);
             const r2 = MathEx.clampi(angle);
-            const r2a = r2+Math.PI*2.0;
-            const r2b = r2-Math.PI*2.0;
+            const r2a = r2+PI2;
+            const r2b = r2-PI2;
             const d = Math.abs(r2-r1);
             const da = Math.abs(r2a-r1);
             const db = Math.abs(r2b-r1);
@@ -245,6 +226,7 @@ class BeaJump2 {
 class GoActor extends GameObject {
     constructor(name){
         super();        
+        this.name = name;
         this.renderer = new RenderSprite(name);
         this.scale = 0.7;
         this.height = renderContext.texas[name].height*this.scale; // FIXME

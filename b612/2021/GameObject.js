@@ -16,7 +16,13 @@ class GameEvent {
     static JUMP = "jump";
 }
 
+let GLOBAL_HASHID = 0;
+
 class GameObject {
+
+    toString(){
+        return this.hashid 
+    }
 
     static RenderAll(collection){
         for(let go of collection){
@@ -31,6 +37,8 @@ class GameObject {
     }
 
     constructor(){
+        GLOBAL_HASHID+=1;
+        this.hashid = this.constructor.name + GLOBAL_HASHID;
         this.scale = 1;
         this.position = {x:0,y:0};
         this.rotation = 0;
@@ -40,6 +48,7 @@ class GameObject {
         this.eventHandlers = {}
         this.effect = Effect.instance;
         this.queue = []
+        this.controller = undefined;
     }
 
     get globalScale(){
@@ -64,6 +73,9 @@ class GameObject {
         while(this.queue.length){
             let [event_type,event_params] = this.queue.shift();
             this.Handle(event_type, event_params);
+            if (this.controller!==undefined){
+                this.controller.Handle(event_type,{that:this, ep:event_params});
+            }
         }
     }
 
@@ -79,8 +91,8 @@ class GameObject {
         for(let eh of eventHandler){
             try{
                 eh(this,event_params);
-            }catch(e){
-                console.log(event_type,eh,e)
+            }catch(e){                
+                console.log("HandleEvent:",event_type,"Handler:",eh,"Exception:",e)
             }
         }
     }
@@ -100,6 +112,9 @@ class GameObject {
             if (new_behaviour!==undefined && new_behaviour!==this.behaviour){                
                 this.behaviour = new_behaviour;                
             }
+        }
+        if (this.controller!==undefined){
+            this.controller.Update(this);
         }
     }
 

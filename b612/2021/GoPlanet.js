@@ -4,13 +4,17 @@ class RenderPlanet {
     static instance = new RenderPlanet();
 
     constructor(){
+
+        this.cmul = V4_SOLIDWHITE;
+        this.cadd = V4_TRANSBLACK;
+
         // outer layers
         var num_lay = 1+Math.round(Math.random()*3);
         if (num_lay){
             var k =[];
             var df = (Math.PI)/num_lay;
             for(let i=0;i<num_lay;i++){
-                let f=(Math.PI*2.0*i)/num_lay - df*0.5 + Math.random()*df;
+                let f=(PI2*i)/num_lay - df*0.5 + Math.random()*df;
                 k.push(f);            
             }        
             this.lay_out = k;
@@ -22,7 +26,7 @@ class RenderPlanet {
             var k =[];
             var df = (Math.PI)/num_lay;
             for(let i=0;i<num_lay;i++){
-                let f=(Math.PI*2.0*i)/num_lay - df*0.5 + Math.random()*df;
+                let f=(PI2*i)/num_lay - df*0.5 + Math.random()*df;
                 k.push(f);
             }
             this.lay_in = k;
@@ -35,7 +39,7 @@ class RenderPlanet {
         if (this.tex===undefined){
             this.tex = xgl_createTexture(renderContext.gx,_bakePlanet(this));
         }
-        renderContext.RenderPlanet(go,this.tex,V4_SOLIDWHITE,V4_TRANSBLACK); // FIXME
+        renderContext.RenderPlanet(go,this.tex,this.cmul,this.cadd); // FIXME
     }
 }
 
@@ -43,16 +47,16 @@ class BhPlanet {
     static instance = new BhPlanet();
 
     constructor(){
-        this.k = MathEx.randomAngle();         
+        this.k = 0;//MathEx.randomAngle();         
         let ksign = Math.random()>0.5?-1.0:1.0;
         this.kv = (1.0+Math.random())*0.01*ksign; 
         this.ks = ksign;
-        this.kkick = 0;
+        this.kkick = 0;        
     }
 
     Update(go){                
         this.k+=this.kv;
-        const sk = (perfmon.time - this.kkick)/1000.0*Math.PI*2;
+        const sk = (perfmon.time - this.kkick)/1000.0*PI2;
         const s = Math.sin(sk*20)*1.0/Math.exp(sk);
         go.scale = go.orgScale * (1+s*0.1);
         go.radius = go.orgRadius * (1+s*0.1);
@@ -61,7 +65,7 @@ class BhPlanet {
     }
 
     kick(){
-        this.kkick = perfmon.time;
+        //this.kkick = perfmon.time;
     }
 }
 
@@ -89,6 +93,9 @@ class GoPlanet extends GameObject {
                 that.kick();
             }
         ];
+
+        // initial setup
+        this.Update();
     }
     kick(){
         this.behaviour.kick();
