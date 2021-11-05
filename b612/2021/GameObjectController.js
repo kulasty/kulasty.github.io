@@ -19,24 +19,24 @@ class GocFollow extends GameObjectController{
         let dst = getPlanet(me.whom);
 
         if (src===undefined){
-            console.log("GcFollow",that.name,"empty src?!")
+            //console.log("GcFollow",that.name,"empty src?!")
             return;
         }
         if (dst===undefined){
-            console.log("GcFollow",that.name,"empty dst?!",me.whom,me)
+            //console.log("GcFollow",that.name,"empty dst?!",me.whom,me)
             return;
         }
-        console.log("GcFollow",that.name,src.hashid,"->",dst.hashid);
+        //console.log("GcFollow",that.name,src.hashid,"->",dst.hashid);
         if (src!==dst){
             //me.paths = astar.getPaths(src,dst);
             if (me.paths.length==0){
                 let delay = Math.round(MathEx.randRange(600,1600));
                 //setTimeout(function(){ that.jump(); } ,delay);    
-                console.log("GcFollow",that.name,"must jump",)
+                //console.log("GcFollow",that.name,"must jump",)
                 that.jump();
             }                
         }else{
-            console.log("GcFollow",that.name,"target reached",src.hashid,dst.hashid);
+            //console.log("GcFollow",that.name,"target reached",src.hashid,dst.hashid);
             me.paths = [];
         }
     }

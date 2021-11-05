@@ -65,7 +65,7 @@ class BhPlanet {
     }
 
     kick(){
-        //this.kkick = perfmon.time;
+        this.kkick = perfmon.time;
     }
 }
 

@@ -486,6 +486,26 @@ function make_demo(){
     game.objects.solid.push(latern);
     latern.spawnAtPlanet(planets[4],MathEx.randomAngle());    
 
+    let me = planets[4];
+    me.addHandler(GameEvent.TOUCHDOWN,function(){
+        latern.lit+=1;
+        console.log("platern+",latern.lit);
+    });
+    me.addHandler(GameEvent.JUMP,function(){
+        latern.lit-=1;
+        console.log("platern-",latern.lit);
+    });
+
+    latern.addHandler(GameEvent.TOUCHDOWN, function(me){
+        me.lit+=1;
+        console.log("latern+",me.lit);
+    });
+    latern.addHandler(GameEvent.JUMP, function(me){
+        me.lit-=1;
+        console.log("latern-",me.lit);
+    });
+
+
 
     player = star;
     player.addHandler(GameEvent.JUMP,function(){
@@ -581,9 +601,16 @@ function main(){
         fetch('assets/planet.vsh.glsl?'+tick).then(x=>x.text()),
         fetch('assets/planet.fsh.glsl?'+tick).then(x=>x.text()),
         fetch('assets/sprite.vsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/sprite.fsh.glsl?'+tick).then(x=>x.text())
-    ]).then(([vsh,fsh,svsh,sfsh]) => {        
-        renderContext.prepstage(vsh,fsh,svsh,sfsh);        
+        fetch('assets/sprite.fsh.glsl?'+tick).then(x=>x.text()),
+        fetch('assets/glow.vsh.glsl?'+tick).then(x=>x.text()),
+        fetch('assets/glow.fsh.glsl?'+tick).then(x=>x.text())
+    ]).then(([planet_vsh,planet_fsh,sprite_vsh,sprite_fsh,glow_vsh,glow_fsh]) => {
+        let programs = [
+            ['planet', planet_vsh, planet_fsh],
+            ['sprite', sprite_vsh, sprite_fsh],
+            ['glow'  , glow_vsh  , glow_fsh],
+        ]        
+        renderContext.prepstage(programs);        
     });    
 
     stats.showPanel( 1 ); // 0: fps, 1: ms, 2: mb, 3+: custom

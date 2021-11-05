@@ -142,10 +142,11 @@ class RendererWebGL {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    prepstage(vsh,fsh,svsh,sfsh){
+    prepstage(programs){
         let gl = this.gx;
-        this.progs.planet = xgl_makeProgram(gl,vsh,fsh);
-        this.progs.sprite = xgl_makeProgram(gl,svsh,sfsh);
+        for(let [name,vsh,fsh] of programs){
+            this.progs[name] = xgl_makeProgram(gl,vsh,fsh);
+        }        
 
         // simple quad for sprite
         let vcs =[
@@ -160,6 +161,7 @@ class RendererWebGL {
         let vb = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, vb);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vcs), gl.DYNAMIC_DRAW);
+        // why it works called only for single program??
         gl.vertexAttribPointer(this.progs.planet.vp, 3, gl.FLOAT, false, 20, 0);            
         gl.vertexAttribPointer(this.progs.planet.uv, 2, gl.FLOAT, false, 20, 12);
 
@@ -203,6 +205,36 @@ class RendererWebGL {
         gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
         gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
         gl.uniform1f(prog.ftime,this.ftime);
+
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        perfmon.watch("gl",t1);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    RenderGlow(sprite,tex,cmul,cadd){       
+        const t1 = perfmon.time;
+        let gl = this.gx;
+        var prog = this.progs.glow;
+        gl.useProgram(prog.prog);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, tex.tex);
+
+        const f = sprite.globalRotation;        
+        const p = sprite.globalPosition;
+        const [camx,camy] = [this.camera.ox * sprite.z_1, this.camera.oy * sprite.z_1];
+        const [px,py] = [p.x + camx, p.y + camy];        
+        
+        const itemsize = sprite.globalScale;
+        //gl.uniform2f(prog.rot_bck, Math.cos(f), Math.sin(f));
+        gl.uniform2f(prog.rot_bck, f, f);
+        gl.uniform2f(prog.pos, px,py )//px*this.cfx-1., 1.-py*this.cfy);
+        gl.uniform2f(prog.scale,tex.width*this.cfx*itemsize,tex.height*this.cfy*itemsize);
+        gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
+        gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
+        gl.uniform1f(prog.ftime,this.ftime);
+
+        gl.blendFunc(gl.ONE, gl.ONE); 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         perfmon.watch("gl",t1);
     }

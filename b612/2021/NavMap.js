@@ -43,7 +43,12 @@ class NavMap{
                 map.push({...dst,k:k});
                 k+=PI2/720;
             }
-            this.maps[p] = map;
+            this.maps[p] = map;            
+        }
+
+        // HAXOR
+        for(let p of planets){
+            p.queue = []; 
         }
         let t2 = perfmon.time;
         console.log("map universe : exit",t2-t1);

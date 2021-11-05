@@ -89,7 +89,8 @@ class BeaJump {
 
         actor.Schedule(GameEvent.JUMP);
         let planet = getPlanet(actor)
-        if (planet instanceof GoPlanet) planet.Schedule(GameEvent.JUMP);
+        //if (planet instanceof GoPlanet) planet.Schedule(GameEvent.JUMP);
+        if (planet !== undefined) planet.Schedule(GameEvent.JUMP);
     }
     get planetLocation(){
         return this.p1;
