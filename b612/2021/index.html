@@ -358,27 +358,6 @@ function physics(dt){
             continue;
         }
 
-        if (rose!==undefined){                        
-            if (getTruePlanet(rose) === getTruePlanet(player)){
-                let ix = Math.floor(MathEx.randRange(0,planets.length-1));
-                let new_planet = planets[ix]
-                rose.jump();
-                //rose.spawnAtPlanet(new_planet,MathEx.randomAngle());
-            }
-            /*
-            if (rose===getPlanet(player)){
-                rose.jump();
-                player.spawnAtPlanet(getPlanet(rose),rose.globalRotation);
-            }
-            if (getPlanet(rose)===getPlanet(player)){
-                let ix = Math.floor(MathEx.randRange(0,planets.length-1));
-                let new_planet = planets[ix]
-                rose.jump();
-                rose.spawnAtPlanet(new_planet,MathEx.randomAngle());
-            }else{
-            }*/
-        }
-
         {
             let cam_target = player;
             if (player.behaviour instanceof BeaStand){
@@ -641,9 +620,23 @@ function make_demo(){
         }    
     });
 
-    fox.controller = new GocFollow(star);
+    player.addHandler(GameEvent.TOUCHDOWN, function(){
+        let rosePlanet = getTruePlanet(rose)
+        if (rosePlanet!==undefined && rosePlanet === getTruePlanet(player)){
+            rose.jump();
+        }
+    });
+
+    rose.addHandler(GameEvent.TOUCHDOWN, function(){
+        let rosePlanet = getTruePlanet(rose)
+        if (rosePlanet!==undefined && rosePlanet === getTruePlanet(player)){
+            rose.jump();
+        }
+    })
+
+    fox.controller = new GocFollow(prince);
     sheep.controller = new GocFollow(star);
-    prince.controller = new GocFollow(star);
+    prince.controller = new GocFollow(rose);
     
     GameObject.UpdateAll(game.objects.solid);
 
