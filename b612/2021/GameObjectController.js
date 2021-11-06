@@ -8,7 +8,7 @@ class GocFollow extends GameObjectController{
     constructor(whom){
         super();
         this.whom = whom;
-        this.addHandler(GameEvent.TOUCHDOWN, this.on_touchdown);
+        //this.addHandler(GameEvent.TOUCHDOWN, this.on_touchdown);
 
         this.paths = [];
     }
@@ -20,7 +20,7 @@ class GocFollow extends GameObjectController{
     }
 
     Update(actor){
-        if (actor.behaviour instanceof BeaStand == false){
+        if (actor.behaviour instanceof BeaStand === false){
             return;
         }
 
@@ -52,7 +52,7 @@ class GocFollow extends GameObjectController{
             return;
         }
 
-        // some paths here        
+        // some paths here
         var angActor = MathEx.clampi(actor.rotation-PI05);
         for(let seg of paths){
             let [k1,k2] = seg;

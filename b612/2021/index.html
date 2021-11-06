@@ -28,7 +28,7 @@
         top:0px;
         left:0px;
         right:0px;
-        border:1px solid #f0f;
+        zborder:1px solid #f0f;
         background:transparent;
     }
     .crisp{
@@ -44,8 +44,9 @@
 <!-- http://davidbau.com/archives/2010/01/30/random_seeds_coded_hints_and_quintillions.html -->
 <script src="./vendor/seedrandom.js"> </script>
 
-<!-- https://github.com/mrdoob/stats.js -->
+<!-- https://github.com/mrdoob/stats.js 
 <script src="./vendor/stats.js"></script>
+-->
 
 <!-- https://tonejs.github.io/ -->
 <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
@@ -97,17 +98,32 @@ function setRenderMode(mode){
     }
 }
 
-
+var player = undefined;
 var planets = [];
 var stars = [];
 
-var player = undefined;
-
 var tsecond = 0
-
-var time_to_use = 0;
+var time_for_physics = 0;
+var time_for_frames = 0;
 const time_step = 10;
+let time_multiplier = 1.0;
 
+
+var cam_back = new Camera(0);
+var cam_front = new Camera(0);
+var game = new Game();
+Game.currentGame = game;
+let cnt_frame = 0;
+
+let rose = undefined, retro = undefined;
+let prince, fox, sheep, box, scarf, bush, star, latern, frost;
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+// make background
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function make_stars(){
     var bg = new GameObject();
     game.objects.background.push(bg);
@@ -142,11 +158,7 @@ function make_stars(){
 
 }    
 
-var cam_back = new Camera(0);
-var cam_front = new Camera(0);
-var game = new Game();
-Game.currentGame = game;
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class EfRGB extends Effect{
     static Red = new EfRGB([1,0,0]);
     static Blu = new EfRGB([0,0,1]);
@@ -162,13 +174,11 @@ class EfRGB extends Effect{
     }
 }
 
-let cnt_frame = 0;
-let stored_effects = [];
-let ast = undefined;
 
-var atlas_name = "fox";
+var atlas_name = "star";
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Game.render
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function render(){
     var t1 = perfmon.time;
     stats.beginSeg("rx");
@@ -185,20 +195,21 @@ function render(){
             const t = mouse;
             p.lightRotation = Math.PI*0.7+Math.atan2(t.y-pos.y,t.x-pos.x);
         }
-    }       
+    }
 
 
     if (renderContext.BeginScene()){
         cnt_frame+=1;
 
+        if (!document.getElementById("overlay").classList.contains("hidden"))
         if ((cnt_frame%4==0)){
             gx_overlay.clearRect(0, 0, 800, 800);            
 
             var astar = staratlas[atlas_name];
             
-            for(let p of planets){
+            for(let p of game.objects.solid){
                 gx_circle(gx_overlay,
-                    p.globalPosition.x, p.globalPosition.y, p.radius, '#f0f',
+                    p.globalPosition.x, p.globalPosition.y, p.radius, 'rgba(255,128,255,0.7)',
                     p.globalRotation, p.globalRotation + PI2-0.1
                 );
 
@@ -273,38 +284,6 @@ function render(){
             }
         }
 
-
-        if (false)
-        if ((cnt_frame%4==0) && (player.behaviour instanceof BeaStand)){
-
-            if (stored_effects.length>0){
-                for(let i in stored_effects){
-                    game.objects.solid[i].effect= stored_effects[i];
-                }
-            }
-            stored_effects = []
-            for(let go of game.objects.solid){
-                stored_effects.push(go.effect);
-            }
-            let prediction = Oracle.getDestination(player);
-            let planet = getPlanet(player);
-            let v = MathEx.vector(player.globalPosition,planet.globalPosition);
-            let angle = player.rotation-PI05; //Math.atan2(v.y,v.x)+Math.PI;
-            ast = astar.getDestination(getPlanet(player),angle);
-            if (prediction!==undefined && prediction.dst!==undefined){
-                prediction.dst.effect = EfRGB.Red; 
-            }            
-            if (ast!==undefined && ast.dst!==undefined ){
-                //ast.dst.effect = EfRGB.Blu;
-            }
-            if (prediction!==undefined && prediction.dst!==undefined && ast!==undefined && ast.dst!==undefined && ast.dst===prediction.dst){
-                prediction.dst.effect = EfRGB.Mag;
-            }
-            for(let p of planets){
-                p.queue = [];
-            }
-        }
-
         //camera.opacity = 1.;
         let cam_target = getPlanet(player);
         if (player.behaviour instanceof BeaJump){
@@ -317,7 +296,6 @@ function render(){
                 
         renderContext.camera = cam_front;
         GameObject.RenderAll(game.objects.solid);        
-
 
         renderContext.EndScene();
     }
@@ -357,20 +335,14 @@ function getTruePlanet(go,depth=3){
     }
 }
 
-
-let rose = undefined, retro = undefined;
-let prince, fox, sheep, box, scarf, bush, star, latern, frost;
-let time_multiplier = 1.0;
-
-var mind=10;
-
+// Game.physics
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function physics(dt){
-    time_to_use=Math.max(Math.min(300,time_to_use+dt),0);
-    while(time_to_use>time_step){
+    time_for_physics=Math.max(Math.min(300,time_for_physics+dt),0);
+    while(time_for_physics>time_step){
         let t1 = perfmon.time;
         stats.beginSeg("ph");
-        time_to_use-=time_step;
+        time_for_physics-=time_step;
         
         GameObject.UpdateAll(game.objects.solid);
         GameObject.UpdateAll(game.objects.background);
@@ -410,11 +382,13 @@ function physics(dt){
     }
 }
 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 let ts1, ts2;
 
-let tr = 0
-
-const MS_PER_FRAME = 20;
+const MS_PER_FRAME = 1000/50;
 let cnt_frames = 0;
 
 function szround(v,m){
@@ -447,11 +421,11 @@ function animationFrame(timestamp){
             //let cfdt = Math.sin(perfmon.time*0.001);
             ///cfdt*=cfdt;
             physics(dt*time_multiplier);
-            tr=Math.min(120,tr+dt);
-            while(tr>MS_PER_FRAME){
+            time_for_frames=Math.min(120,time_for_frames+dt);
+            while(time_for_frames>MS_PER_FRAME){
                 render();
                 cnt_frames+=1;
-                tr-=MS_PER_FRAME;
+                time_for_frames-=MS_PER_FRAME;
             }
         }
 
@@ -469,7 +443,7 @@ function animationFrame(timestamp){
                 const prdx = time_in_rdx*100/time_in_frame;
                 const pglx = time_in_glx*100/time_in_rdx;
                 if (pload>0){
-                    document.getElementById("fps").innerHTML = `CPU:${szround(pload,100)}% R:${szround(prdx,100)}% (${szround(pglx,100)}%) P:${szround(pphy,100)}%`
+                    document.getElementById("fps").innerHTML = `CPU:${szround(pload,100)}% R:${metrics.rx.length}#${szround(prdx,100)}% (${szround(pglx,100)}%) P:${szround(pphy,100)}%`
                 }else{
                     document.getElementById("fps").innerHTML = '';
                 }
@@ -825,9 +799,9 @@ document.onclick = function(){
     //bgsynth.triggerAttack("G2");
 }
 
-document.ondblclick = function(){
-    setFullScreen();
-}
+//document.ondblclick = function(){
+//    setFullScreen();
+//}
 
 var mouse = { x:0, y:0};
 

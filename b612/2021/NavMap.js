@@ -48,7 +48,7 @@ class NavMap{
                 }
                 last = dst;
                 //map.push({...dst,k:k});
-                k+=PI2/1440;
+                k+=PI2/360;
                 //k+=PI2/120;
             }
             last = {...map[0]};
@@ -72,7 +72,11 @@ class NavMap{
             for(let i=0;i<map.length-1;i++){
                 const hit = map[i].dst;
                 if (hit===undefined || hit===dst){
-                    paths.push([map[i].k,map[i+1].k]);
+                    let k1 = map[i].k + 0.01;
+                    let k2 = map[i+1].k - 0.01;
+                    if (k1<k2){
+                        paths.push([k1,k2]);
+                    } 
                 }
             }
         }
