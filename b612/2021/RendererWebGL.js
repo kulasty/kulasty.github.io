@@ -18,7 +18,7 @@ function _createGraphics3d(width, height){
     var names=["webgl3", "webgl2", "webgl","experimental-webgl","webkit-3d","moz-webgl"];
     for(const name of names){
         try{
-            let gx = canvas.getContext(name);
+            let gx = canvas.getContext(name, {antialias: true, premultipliedAlpha: false });
             console.log("[i]","WebGl",name,gx);
             if (gx!==null){
                 gl = gx;
@@ -157,6 +157,7 @@ class RendererWebGL {
         this.rt_prev = fbs[1];
         this.rt_outp = fbs[2];
        
+       // this.rt_this = this.rt_screen;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -284,6 +285,7 @@ class RendererWebGL {
         gl.uniform1f(prog.ftime,this.ftime);
         gl.uniform1f(prog.blur,blur);
 
+        /*
         try{
             const uvx = sprite.behaviour.v.x;
             const uvy = sprite.behaviour.v.y;
@@ -293,6 +295,7 @@ class RendererWebGL {
         }catch(e){
             gl.uniform2f(prog.uv_ofs,0.,0.);
         }
+        */
 
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 

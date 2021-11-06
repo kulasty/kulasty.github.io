@@ -259,7 +259,8 @@ function getTruePlanet(go,depth=3){
 
 
 let rose = undefined, retro = undefined;
-let prince, fox, sheep, box, scarf, bush, star, latern;
+let prince, fox, sheep, box, scarf, bush, star, latern, frost;
+let time_multiplier = 1.0;
 
 var mind=10;
 
@@ -279,11 +280,13 @@ function physics(dt){
 
         if (rose!==undefined){            
             if (rose===getPlanet(player)){
+                rose.jump();
                 player.spawnAtPlanet(getPlanet(rose),rose.globalRotation);
             }
             if (getPlanet(rose)===getPlanet(player)){
-                let ix = Math.round(MathEx.randRange(0,planets.length-1));
+                let ix = Math.floor(MathEx.randRange(0,planets.length-1));
                 let new_planet = planets[ix]
+                rose.jump();
                 rose.spawnAtPlanet(new_planet,MathEx.randomAngle());
             }else{
             }
@@ -343,7 +346,7 @@ function animationFrame(timestamp){
             const dt = ts2-ts1;
             //let cfdt = Math.sin(perfmon.time*0.001);
             ///cfdt*=cfdt;
-            physics(dt);
+            physics(dt*time_multiplier);
             tr=Math.min(120,tr+dt);
             while(tr>MS_PER_FRAME){
                 render();
@@ -453,17 +456,38 @@ function make_demo(){
 
     sheep = new GoActor("sheep");
     game.objects.solid.push(sheep);
-    sheep.spawnAtPlanet(planets[2],MathEx.randomAngle())
+    sheep.spawnAtPlanet(planets[2],MathEx.randomAngle());
 
     rose = new GoActor("rose");
     game.objects.solid.push(rose);
     rose.effect = new EfBlink();
-    rose.spawnAtPlanet(planets[3],MathEx.randomAngle())
+    rose.spawnAtPlanet(planets[3],MathEx.randomAngle());
 
     box = new GoActor("box");
     game.objects.solid.push(box);
-    box.spawnAtPlanet(planets[1],MathEx.randomAngle())
+    box.spawnAtPlanet(planets[1],MathEx.randomAngle());
     box.radius*=0.7;
+
+    function frost_slow(){
+        time_multiplier = Math.max(0.2,time_multiplier - 0.3);
+        console.log("time_multiplier",time_multiplier);
+    }
+    function frost_speed(){
+        time_multiplier = Math.min(1,time_multiplier + 0.3);
+        console.log("time_multiplier",time_multiplier);
+    }
+
+    for(let i=0;i<3;i++){
+        frost = new GoActor("frost");
+        game.objects.solid.push(frost);
+        frost.spawnAtPlanet(planets[5],MathEx.randomAngle());    
+        frost.queue = [];
+        frost.addHandler(GameEvent.TOUCHDOWN,frost_slow);
+        frost.addHandler(GameEvent.JUMP,frost_speed);
+    }
+    planets[5].queue = [];
+    planets[5].addHandler(GameEvent.TOUCHDOWN,frost_slow);
+    planets[5].addHandler(GameEvent.JUMP,frost_speed);    
 
     retro = new GoActor("retro");
     game.objects.solid.push(retro);
@@ -596,26 +620,22 @@ function main(){
     console.log("main().enter")
     renderContext = new RendererWebGL(800,800); // FIXME 800
 
-    let tick = new Date().now;    
-    Promise.all([
-        fetch('assets/planet.vsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/planet.fsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/sprite.vsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/sprite.fsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/glow.vsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/glow.fsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/fullscreen.vsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/fse_pass.fsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/fullscreen.vsh.glsl?'+tick).then(x=>x.text()),
-        fetch('assets/fse_accu.fsh.glsl?'+tick).then(x=>x.text())
-    ]).then((res) => {
-        let pnames = ['planet','sprite','glow','fse_pass','fse_accu'];
+    let tick = new Date().now;
+    let pnames = ['planet','sprite','glow','fse_pass','fse_accu'];
+    let fetchbatch = []
+    for(let pn of pnames){
+        let vsn = pn;
+        let fsn = pn;
+        fetchbatch.push(fetch(`assets/${vsn}.vsh.glsl?`+tick).then(x=>x.text()));
+        fetchbatch.push(fetch(`assets/${fsn}.fsh.glsl?`+tick).then(x=>x.text()));
+    }
+    Promise.all(fetchbatch).then((res)=>{
         let programs = [];
         for(let i=0;i<pnames.length;i++){
             programs.push([pnames[i],res[i*2],res[i*2+1]]);
         }
-        renderContext.prepstage(programs);        
-    });    
+        renderContext.prepstage(programs);
+    });
 
     stats.showPanel( 1 ); // 0: fps, 1: ms, 2: mb, 3+: custom
     if (stats.dom!==undefined){
@@ -716,6 +736,7 @@ function setRes(sx,sy,crisp){
     <canvas id="display"></canvas>
     <br>
     <button id="toggle_fullscreen" class="pac" onclick="toggleFullScreen()">Full Screen</button>
+    <span><a href="https://github.com/kulasty/kulasty.github.io/tree/main/b612/2021">sourcecode</a></span>
     <!--
     <button onclick="setRes(800,800)" class="pac">800</button>
     <button onclick="setRes(200,200)" class="pac">200</button>

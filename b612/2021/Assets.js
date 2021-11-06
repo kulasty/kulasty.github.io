@@ -18,4 +18,5 @@ var txr2d = {
     bush:   _createTexture("bush.png"),
     latern:   _createTexture("latern.png"),
     latern_lit:   _createTexture("latern_lit.png"),
+    frost:   _createTexture("frost.png"),
 }

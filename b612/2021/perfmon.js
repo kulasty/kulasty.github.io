@@ -17,7 +17,7 @@ class PerfMon {
     static average(array){    
         if (!array.length) { return -1; }
         const accu = sum(array);
-        return Math.round(accu*1000.0/array.length);
+        return Math.floor(accu*1000.0/array.length);
     }
     
     static sum(array){

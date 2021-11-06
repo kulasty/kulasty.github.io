@@ -16,7 +16,7 @@ class GocFollow extends GameObjectController{
     on_touchdown(me,params){
         let that = params.that;
         let src = getTruePlanet(that);
-        let dst = getPlanet(me.whom);
+        let dst = getTruePlanet(me.whom);
 
         if (src===undefined){
             //console.log("GcFollow",that.name,"empty src?!")
@@ -30,7 +30,7 @@ class GocFollow extends GameObjectController{
         if (src!==dst){
             //me.paths = astar.getPaths(src,dst);
             if (me.paths.length==0){
-                let delay = Math.round(MathEx.randRange(600,1600));
+                let delay = Math.floor(MathEx.randRange(600,1600));
                 //setTimeout(function(){ that.jump(); } ,delay);    
                 //console.log("GcFollow",that.name,"must jump",)
                 that.jump();
@@ -47,7 +47,7 @@ class GocFollow extends GameObjectController{
         }
 
         let src = getTruePlanet(actor);
-        let dst = getPlanet(this.whom);
+        let dst = getTruePlanet(this.whom);
         if (dst===src){
             return;
         }
