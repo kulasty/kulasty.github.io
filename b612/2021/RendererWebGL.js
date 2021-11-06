@@ -301,7 +301,7 @@ class RendererWebGL {
         */
 
         gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);         
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         perfmon.watch("gl",t1);
     }

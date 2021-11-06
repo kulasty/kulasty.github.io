@@ -121,17 +121,19 @@ let prince, fox, sheep, box, scarf, bush, star, latern, frost;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-
+var bg
 // make background
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function make_stars(){
-    var bg = new GameObject();
+    bg = new GameObject();
     game.objects.background.push(bg);
     bg.renderer = new RenderSprite("bg");
     bg.position = {x:400,y:400};
     bg.scale = 2;
     bg.z_1 = 0.1;
-
+    bg.effect = new Effect();
+    bg.effect.cadd = [0,0,0,0.5];
+        
     stars = [];
 
     Math.seedrandom("starfield");
@@ -285,11 +287,13 @@ function render(){
         }
 
         //camera.opacity = 1.;
-        let cam_target = getPlanet(player);
-        if (player.behaviour instanceof BeaJump){
-            cam_target = player;
+        if (player!==undefined){
+            let cam_target = getPlanet(player);
+            if (player.behaviour instanceof BeaJump){
+                cam_target = player;
+            }
+            cam_back.setTarget(player);
         }
-        cam_back.setTarget(player);
                 
         renderContext.camera = cam_back;
         GameObject.RenderAll(game.objects.background);
@@ -344,10 +348,15 @@ function physics(dt){
         stats.beginSeg("ph");
         time_for_physics-=time_step;
         
-        GameObject.UpdateAll(game.objects.solid);
         GameObject.UpdateAll(game.objects.background);
+        GameObject.UpdateAll(game.objects.solid);
+
         for(let go of game.objects.solid){
             go.DispatchAll();
+        }
+
+        if (player===undefined){
+            continue;
         }
 
         if (rose!==undefined){            

@@ -5,10 +5,15 @@ const V4_TRANSBLACK = [0,0,0,0];
 
 class Effect {
     static instance = new Effect();
+    constructor(){        
+        this.cmul = V4_SOLIDWHITE;
+        this.cadd = V4_TRANSBLACK;
+        this.blur = 0.;
+    }
     Apply(go){
-        go.renderer.cmul = V4_SOLIDWHITE;
-        go.renderer.cadd = V4_TRANSBLACK;
-        go.renderer.blur = 0.;
+        go.renderer.cmul = this.cmul;
+        go.renderer.cadd = this.cadd;
+        go.renderer.blur = this.blur;
     }
 }
 

@@ -13,15 +13,15 @@ uniform vec2 uv_ofs; // offset for movement
 
 void main(){            
     //gl_FragColor = texture2D(tex_spr,uv_bck)*cmul+cadd;
-    //gl_FragColor = vec4(uv_bck,0,1);
+    //gl_FragColor = vec4(uv_bck,0,1);    
 
-    /* good
+    //* good
     vec4 c = texture2D(tex_spr,uv_bck);
     float lum = length(c.rgb);
     gl_FragColor = c*cmul+cadd*lum;    
     /**/
 
-    //* with blur
+    /* with blur
     vec4 c = texture2D(tex_spr,uv_bck);
     float lum = length(c.rgb);
     c = c*cmul+cadd*lum;    
