@@ -157,7 +157,7 @@ class RendererWebGL {
         this.rt_prev = fbs[1];
         this.rt_outp = fbs[2];
        
-       // this.rt_this = this.rt_screen;
+        this.rt_this = this.rt_screen;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -283,6 +283,9 @@ class RendererWebGL {
         gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
         gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
         gl.uniform1f(prog.ftime,this.ftime);
+        if(this.rt_this === this.rt_screen){
+            blur = 0;
+        }
         gl.uniform1f(prog.blur,blur);
 
         /*
