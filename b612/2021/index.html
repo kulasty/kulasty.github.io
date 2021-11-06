@@ -358,7 +358,14 @@ function physics(dt){
             continue;
         }
 
-        if (rose!==undefined){            
+        if (rose!==undefined){                        
+            if (getTruePlanet(rose) === getTruePlanet(player)){
+                let ix = Math.floor(MathEx.randRange(0,planets.length-1));
+                let new_planet = planets[ix]
+                rose.jump();
+                //rose.spawnAtPlanet(new_planet,MathEx.randomAngle());
+            }
+            /*
             if (rose===getPlanet(player)){
                 rose.jump();
                 player.spawnAtPlanet(getPlanet(rose),rose.globalRotation);
@@ -369,7 +376,7 @@ function physics(dt){
                 rose.jump();
                 rose.spawnAtPlanet(new_planet,MathEx.randomAngle());
             }else{
-            }
+            }*/
         }
 
         {
