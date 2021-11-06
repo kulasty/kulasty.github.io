@@ -11,11 +11,25 @@
 
 <style>
     *{margin:0; padding:0; background-color: black; font-family:'Courier New', Courier, monospace}
-    #display{
+    .hidden{
+        display:none;
+    }
+    #display{        
         width: 100vmin;
         height:100vmin;
         display:block;
         margin:auto;
+    }
+    #overlay{
+        width: 100vmin;
+        height:100vmin;
+        position:absolute;
+        margin:auto;
+        top:0px;
+        left:0px;
+        right:0px;
+        border:1px solid #f0f;
+        background:transparent;
     }
     .crisp{
         image-rendering:pixelated;    
@@ -152,6 +166,8 @@ let cnt_frame = 0;
 let stored_effects = [];
 let ast = undefined;
 
+var atlas_name = "fox";
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function render(){
     var t1 = perfmon.time;
@@ -174,6 +190,90 @@ function render(){
 
     if (renderContext.BeginScene()){
         cnt_frame+=1;
+
+        if ((cnt_frame%4==0)){
+            gx_overlay.clearRect(0, 0, 800, 800);            
+
+            var astar = staratlas[atlas_name];
+            
+            for(let p of planets){
+                gx_circle(gx_overlay,
+                    p.globalPosition.x, p.globalPosition.y, p.radius, '#f0f',
+                    p.globalRotation, p.globalRotation + PI2-0.1
+                );
+
+            }
+
+            let planetindex = function(p){
+                for(let i in planets){
+                    if (planets[i]===p) return i;
+                }
+                return -1;
+            }
+
+            for(let p of planets)
+            {
+                //let p = planets[0];
+                let seg = [];
+                let gx = gx_overlay;
+                for(let hit of astar.maps[p]){
+                    let dst = hit.dst;
+                    let k = hit.k;
+                    seg.push(hit);
+                    if (seg.length>1){                        
+                        gx.beginPath();
+                        var [h1,h2] = seg;
+                        let k1 = h1.k;
+                        let k2 = h2.k;
+
+
+                        let style = 'rgba(128,128,255,0.3)'
+                        let r2 = 40+planetindex(h1.dst)*5;
+                        if (h1.dst===undefined){
+                            style = 'rgba(255,128,128,0.3)'
+                            r2 = 120;
+                        }
+                        if (h1.dst===p){
+                            style = 'rgba(255,255,128,0.3)'
+                            r2 = 30;
+                        }
+
+                        let k2a = Math.max(k1,k2- 4.0/(p.radius+10));
+                        let k2b = Math.max(k1,k2- 4.0/(p.radius+r2));
+
+                        gx.arc(p.globalPosition.x,p.globalPosition.y,p.radius+10,k1,k2a,false);
+                        gx.arc(p.globalPosition.x,p.globalPosition.y,p.radius+r2,k2b,k1,true);
+                        gx.closePath();                        
+                        gx.strokeStyle = style;
+                        gx.stroke();
+                        gx.fillStyle = style;
+                        gx.fill();
+                        seg.shift();
+                        
+                    }                    
+                }
+            }
+
+            {
+                let atlas_name_map = {"fox":fox, "star": star, "prince": prince, "sheep": sheep}
+                let actor = atlas_name_map[atlas_name];
+
+                let angle = actor.rotation-PI05; //Math.atan2(v.y,v.x)+Math.PI;
+                let prediction = astar.getDestination(getTruePlanet(actor),angle);
+
+                if (prediction!==undefined){
+                    let p = prediction.dst;
+                    if (p!==undefined){
+                        gx_disk(gx_overlay,
+                                p.globalPosition.x, p.globalPosition.y, p.radius, 'rgba(255,255,0,0.2)',
+                                p.globalRotation, p.globalRotation + PI2-0.1
+                            );
+                    }
+                }
+            }
+        }
+
+
         if (false)
         if ((cnt_frame%4==0) && (player.behaviour instanceof BeaStand)){
 
@@ -414,7 +514,7 @@ function shuffle(array) {
 
 
 
-var astar = new NavMap();
+var staratlas = {};
 
 function make_demo(){
     planets = []
@@ -430,9 +530,14 @@ function make_demo(){
             game.objects.solid.push(p);
         }
     }    
-    
-    document.getElementById("fps").innerHTML = 'Calculating NavMap...';
-    astar.process(planets, new GoActor("star")); // radius required
+        
+    let actors = ['star','prince','fox','sheep'];
+    for(let actorname of actors){
+        var astar = new NavMap();
+        console.log("NavMap",actorname);
+        astar.process(planets, new GoActor(actorname)); // radius required
+        staratlas[actorname] = astar;
+    }
 
     
     prince = new GoActor("prince");    
@@ -568,6 +673,7 @@ function make_intro(){
     var p2 = new GoPlanet(`level1-0-1`,500,400);
     game.objects.solid.push(p2);
     planets = [p1,p2];
+    astar.process(planets, new GoActor("prince")); // radius required
     prince = new GoActor("prince");
     prince.spawnAtPlanet(p1,0);
     game.objects.solid.push(prince);
@@ -654,9 +760,14 @@ function main(){
     make_demo();
 
     animationFrame();
+
+
+    gx_overlay = _createGraphics2d("overlay",800,800);
     
     console.log("main().exit");
 }
+
+let gx_overlay;
 
 function ai_random(actor){
     let delay = Math.round(MathEx.randRange(600,1600));
@@ -682,6 +793,14 @@ function setFullScreen() {
 
 }
 
+function toggleOverlay() {
+    let overlay = document.getElementById("overlay");
+    if (overlay.classList.contains("hidden")){
+        overlay.classList.remove("hidden");
+    }else{
+        overlay.classList.add("hidden");
+    }
+}
 
 function toggleFullScreen() {
   var doc = window.document;
@@ -734,8 +853,10 @@ function setRes(sx,sy,crisp){
 <body onload="main()">
     <span id="fps" style="position:absolute;top:0;left:0;color:white">Loading...</span>
     <canvas id="display"></canvas>
+    <canvas id="overlay" class="hidden"></canvas>
     <br>
     <button id="toggle_fullscreen" class="pac" onclick="toggleFullScreen()">Full Screen</button>
+    <button id="toggle_fullscreen" class="pac" onclick="toggleOverlay()">Debug Overlay</button>
     <span><a href="https://github.com/kulasty/kulasty.github.io/tree/main/b612/2021">sourcecode</a></span>
     <!--
     <button onclick="setRes(800,800)" class="pac">800</button>

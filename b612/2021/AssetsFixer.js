@@ -1,11 +1,40 @@
 "use strict";
 
-function _createGraphics2d(width, height)
+function _createGraphics2d(domid, width, height)
 {
-	var canvas = document.getElementById("display");    
+	var canvas = document.getElementById(domid);    
     canvas.width = width;
     canvas.height = height;
 	return canvas.getContext("2d");;	
+}
+
+function gx_circle(gx,ox,oy,r,c,k1=0,k2=PI2){
+    gx.beginPath();
+    gx.arc(ox, oy, r, k1, k2, false);
+    //gx.fillStyle = c;
+    //gx.fill();
+    gx.lineWidth = 2;
+    gx.strokeStyle = c;
+    gx.stroke();        
+}
+
+function gx_disk(gx,ox,oy,r,c,k1=0,k2=PI2){
+    gx.beginPath();
+    gx.arc(ox, oy, r, k1, k2, false);
+    gx.fillStyle = c;
+    gx.fill();
+    //gx.lineWidth = 2;
+    //gx.strokeStyle = c;
+    //gx.stroke();        
+}
+
+function gx_line(gx, x1, y1, x2, y2, c){
+    gx.beginPath();
+    gx.strokeStyle = c;
+    gx.lineWidth = 1;
+    gx.moveTo(x1,y1);
+    gx.lineTo(x2,y2);
+    gx.stroke();
 }
 
 function _createTexture(filename){

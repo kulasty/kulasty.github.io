@@ -14,31 +14,9 @@ class GocFollow extends GameObjectController{
     }
         
     on_touchdown(me,params){
-        let that = params.that;
-        let src = getTruePlanet(that);
+        let actor = params.that;
+        let src = getTruePlanet(actor);
         let dst = getTruePlanet(me.whom);
-
-        if (src===undefined){
-            //console.log("GcFollow",that.name,"empty src?!")
-            return;
-        }
-        if (dst===undefined){
-            //console.log("GcFollow",that.name,"empty dst?!",me.whom,me)
-            return;
-        }
-        //console.log("GcFollow",that.name,src.hashid,"->",dst.hashid);
-        if (src!==dst){
-            //me.paths = astar.getPaths(src,dst);
-            if (me.paths.length==0){
-                let delay = Math.floor(MathEx.randRange(600,1600));
-                //setTimeout(function(){ that.jump(); } ,delay);    
-                //console.log("GcFollow",that.name,"must jump",)
-                that.jump();
-            }                
-        }else{
-            //console.log("GcFollow",that.name,"target reached",src.hashid,dst.hashid);
-            me.paths = [];
-        }
     }
 
     Update(actor){
@@ -56,28 +34,32 @@ class GocFollow extends GameObjectController{
         // look for paths a.k.a lazy init
         if (paths.length==0){
             if (src!==undefined && dst!==undefined){
-                paths = astar.getPaths(src,dst);                
+                let astar = staratlas[actor.name];
+                for(let tries = 0; tries<3; tries++){
+                    paths = astar.getPaths(src,dst);
+                    if (paths.length!=0){
+                        break;
+                    }
+                    dst = planets[Math.floor(MathEx.randRange(0,planets.length))];
+                }
                 this.paths = paths;
             }
         }
-        // ups, all blocked?
+        // ups, still blocked?
         if (paths.length==0){
-            // ups?
+            // ups? jump? wait?
             actor.jump();
             return;
         }
 
-        // some paths here
-        var angTarget = paths[0].k;
-        var angActor = actor.rotation-PI05;
-        let [d,a] = MathEx.angleDelta(angTarget,angActor);
-        if (d<mind){
-            mind = d;
+        // some paths here        
+        var angActor = MathEx.clampi(actor.rotation-PI05);
+        for(let seg of paths){
+            let [k1,k2] = seg;
+            if (angActor>k1 && angActor<k2){
+                actor.jump();
+                this.paths = [];
+            }
         }
-        if (d<0.01){
-            actor.jump();
-            this.paths = [];
-        }
-        
     }
 }

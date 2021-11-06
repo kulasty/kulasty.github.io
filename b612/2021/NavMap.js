@@ -10,10 +10,12 @@ class NavMap{
         if (map===undefined){
             return undefined;
         }
+        let prev = undefined;
         for(let dst of map){
             if (dst.k>=angle){
-                return dst;
+                return prev;
             }
+            prev = dst;
         }
         return undefined;
     }
@@ -38,11 +40,20 @@ class NavMap{
             let p = planets[i];
             let k = 0;
             let map = [];
+            let last = undefined;
             while(k<PI2){
                 let dst = this._spawn(who,p,k);
-                map.push({...dst,k:k});
-                k+=PI2/720;
+                if (last===undefined || (last.dst!=dst.dst && last.steps!=dst.steps )){
+                    map.push({...dst,k:k});
+                }
+                last = dst;
+                //map.push({...dst,k:k});
+                k+=PI2/1440;
+                //k+=PI2/120;
             }
+            last = {...map[0]};
+            last.k = last.k+PI2;
+            map.push(last);
             this.maps[p] = map;            
         }
 
@@ -58,14 +69,11 @@ class NavMap{
         let paths = [];
         let map = this.maps[src];
         if (map!==undefined){
-            for(let p of map){
-                let target = p.dst;
-                // are there anything in that direction
-                if (target===undefined) continue
-                // is that what we want?
-                if (target!==dst) continue;
-                // yeah!
-                paths.push(p);
+            for(let i=0;i<map.length-1;i++){
+                const hit = map[i].dst;
+                if (hit===undefined || hit===dst){
+                    paths.push([map[i].k,map[i+1].k]);
+                }
             }
         }
         return paths;
