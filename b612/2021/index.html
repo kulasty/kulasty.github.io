@@ -71,7 +71,6 @@
 <script src="GoActor.js"> </script>
 <script src="GoLatern.js"> </script>
 <script src="Game.js"></script>
-<script src="Oracle.js"></script>
 <script src="NavMap.js"></script>
 <script src="GameObjectController.js"></script>
 
@@ -236,31 +235,31 @@ function render(){
                     if (seg.length>1){                        
                         gx.beginPath();
                         var [h1,h2] = seg;
-                        let k1 = h1.k;
-                        let k2 = h2.k;
+                        let k1 = h1.k + 0.01;
+                        let k2 = h2.k - 0.01;
+                        if (k1<k2){
+                            let style = 'rgba(128,128,255,0.3)'
+                            let r2 = 40+planetindex(h1.dst)*5;
+                            if (h1.dst===undefined){
+                                style = 'rgba(255,128,128,0.3)'
+                                r2 = 120;
+                            }
+                            if (h1.dst===p){
+                                style = 'rgba(255,255,128,0.3)'
+                                r2 = 30;
+                            }
 
+                            let k2a = Math.max(k1,k2- 4.0/(p.radius+10));
+                            let k2b = Math.max(k1,k2- 4.0/(p.radius+r2));                        
 
-                        let style = 'rgba(128,128,255,0.3)'
-                        let r2 = 40+planetindex(h1.dst)*5;
-                        if (h1.dst===undefined){
-                            style = 'rgba(255,128,128,0.3)'
-                            r2 = 120;
+                            gx.arc(p.globalPosition.x,p.globalPosition.y,p.radius+10,k1,k2a,false);
+                            gx.arc(p.globalPosition.x,p.globalPosition.y,p.radius+r2,k2b,k1,true);
+                            gx.closePath();                        
+                            gx.strokeStyle = style;
+                            gx.stroke();
+                            gx.fillStyle = style;
+                            gx.fill();
                         }
-                        if (h1.dst===p){
-                            style = 'rgba(255,255,128,0.3)'
-                            r2 = 30;
-                        }
-
-                        let k2a = Math.max(k1,k2- 4.0/(p.radius+10));
-                        let k2b = Math.max(k1,k2- 4.0/(p.radius+r2));
-
-                        gx.arc(p.globalPosition.x,p.globalPosition.y,p.radius+10,k1,k2a,false);
-                        gx.arc(p.globalPosition.x,p.globalPosition.y,p.radius+r2,k2b,k1,true);
-                        gx.closePath();                        
-                        gx.strokeStyle = style;
-                        gx.stroke();
-                        gx.fillStyle = style;
-                        gx.fill();
                         seg.shift();
                         
                     }                    
@@ -272,7 +271,7 @@ function render(){
                 let actor = atlas_name_map[atlas_name];
 
                 let angle = actor.rotation-PI05; //Math.atan2(v.y,v.x)+Math.PI;
-                let prediction = astar.getDestination(getTruePlanet(actor),angle);
+                let prediction = astar.getDestinationFromPlanet(getTruePlanet(actor),angle);
 
                 if (prediction!==undefined){
                     let p = prediction.dst;
@@ -500,6 +499,8 @@ function shuffle(array) {
 var staratlas = {};
 
 function make_demo(){
+
+    // setup planets
     planets = []
     for(let y=0;y<3;y++){
         var nx = 3;
@@ -513,7 +514,8 @@ function make_demo(){
             game.objects.solid.push(p);
         }
     }    
-        
+
+    // create navmaps
     let actors = ['star','prince','fox','sheep'];
     for(let actorname of actors){
         var astar = new NavMap();
@@ -522,39 +524,8 @@ function make_demo(){
         staratlas[actorname] = astar;
     }
 
+    // create "posters"
     
-    prince = new GoActor("prince");    
-    game.objects.solid.push(prince);
-    prince.spawnAtPlanet(planets[0],MathEx.randomAngle());    
-
-    fox = new GoActor("fox");
-    game.objects.solid.push(fox);
-    fox.spawnAtPlanet(planets[1],MathEx.randomAngle())
-    /*
-    fox.addHandler(GameEvent.TOUCHDOWN,function(){
-        if (getPlanet(fox)!==getPlanet(star)){
-            paths = astar.getPaths(getPlanet(fox),getPlanet(star));
-            if (paths.length==0){
-                let delay = Math.round(MathEx.randRange(600,1600));
-                setTimeout(function(){ fox.jump(); } ,delay);    
-            }                
-        }
-    });*/    
-    
-
-    sheep = new GoActor("sheep");
-    game.objects.solid.push(sheep);
-    sheep.spawnAtPlanet(planets[2],MathEx.randomAngle());
-
-    rose = new GoActor("rose");
-    game.objects.solid.push(rose);
-    rose.effect = new EfBlink();
-    rose.spawnAtPlanet(planets[3],MathEx.randomAngle());
-
-    box = new GoActor("box");
-    game.objects.solid.push(box);
-    box.spawnAtPlanet(planets[1],MathEx.randomAngle());
-    box.radius*=0.7;
 
     function frost_slow(){
         time_multiplier = Math.max(0.2,time_multiplier - 0.3);
@@ -589,10 +560,35 @@ function make_demo(){
     game.objects.solid.push(bush);
     bush.spawnAtPlanet(planets[planets.length-3],MathEx.randomAngle());
     
-    
+    // create actors
+    prince = new GoActor("prince");    
+    game.objects.solid.push(prince);
+    prince.spawnAtPlanet(planets[0],MathEx.randomAngle());    
+
+    fox = new GoActor("fox");
+    game.objects.solid.push(fox);
+    fox.spawnAtPlanet(planets[1],MathEx.randomAngle())   
+
+    sheep = new GoActor("sheep");
+    game.objects.solid.push(sheep);
+    sheep.spawnAtPlanet(planets[2],MathEx.randomAngle());
+
+    box = new GoActor("box");
+    game.objects.solid.push(box);
+    box.spawnAtPlanet(planets[1],MathEx.randomAngle());
+    box.radius*=0.7;
+
     star = new GoActor("star")    
     game.objects.solid.push(star);
     star.spawnAtPlanet(planets[planets.length-4],MathEx.randomAngle());    
+
+    rose = new GoActor("rose");
+    game.objects.solid.push(rose);
+    rose.effect = new EfBlink();
+    rose.spawnAtPlanet(planets[3],MathEx.randomAngle());
+
+    
+    // put lattern last as it glows
 
     latern = new GoLatern();
     game.objects.solid.push(latern);
@@ -618,7 +614,7 @@ function make_demo(){
     });
 
 
-
+    // setup logic
     player = star;
     player.addHandler(GameEvent.JUMP,function(){
         console.log("Player.JUMP");

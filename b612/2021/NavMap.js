@@ -4,7 +4,7 @@ class NavMap{
         this.maps = new Map();
     }
 
-    getDestination(planet,angle){
+    getDestinationFromPlanet(planet,angle){
         angle = MathEx.clampi(angle);
         let map = this.maps[planet];        
         if (map===undefined){
@@ -20,10 +20,38 @@ class NavMap{
         return undefined;
     }
 
+    getDestinationForActor(go,MAX_SECONDS = 2){
+        let obj = new GameObject();
+        obj.position = {...go.globalPosition};
+        obj.radius = go.radius;
+        go.radius = -1; // HAXOR
+        obj.rotation = go.globalRotation;
+        
+        let beh = new BeaJump(obj,getPlanet(go),undefined);
+        if (go.behaviour instanceof BeaJump){
+            beh.v = {...go.behaviour.v};
+        }
+
+        try{
+            const MAX_STEPS = MAX_SECONDS * (1000/time_step); 
+            for(let step=0;step<MAX_STEPS;step++){
+                let be = beh.Update(obj);
+                if (be!==undefined && be!==beh && be instanceof BeaStand && be.planet !== go){
+                    return {dst:be.planet,steps:step};
+                }
+            }
+            //console.log('getDestination() exhausted!',MAX_STEPS);
+            return {dst:undefined,steps:MAX_STEPS};
+        }finally{
+            go.radius = obj.radius;
+        }
+    }
+
+
     _spawn(actor,planet,angle){
         actor.spawnAtPlanet(planet,angle);
         actor.Update();
-        return Oracle.getDestination(actor,10);
+        return this.getDestinationForActor(actor,10);
     }
     
     process(planets,who){
