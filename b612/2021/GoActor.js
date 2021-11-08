@@ -3,6 +3,7 @@
 //const JUMP_STRENGTH = 3;
 const JUMP_STRENGTH = 6;
 const DUMP_VELOCITY = 0.999;
+//const DUMP_VELOCITY = 0.998;
 
 const CLR_SHADOW = [0x37/256.0, 0x18/256.0, 0x42/256.0];
 
@@ -105,7 +106,7 @@ class BeaJump {
         let line = MathEx.vector(p,(this.p2||this.p1).globalPosition);
         let dist = MathEx.vlength(line);
         let f = {x:line.x/dist, y:line.y/dist};
-        let cf = this.p2?0.1:0.05;
+        let cf = this.p2?0.1:0.05; // WTF, how this works??
         this.v.x = this.v.x*DUMP_VELOCITY + f.x*cf;
         this.v.y = this.v.y*DUMP_VELOCITY + f.y*cf;
         if (this.p2!==undefined){
@@ -135,6 +136,7 @@ class BeaJump {
                 return new BeaStand(go,g,angle-g.globalRotation);
             }
             if (g!==this.p1 && g instanceof GoPlanet && dist<min_d && dist<=(go.radius+g.radius)*2){
+            //if (g!==this.p1 && g instanceof GoPlanet && dist<min_d){ // player controll a bit too inconvenient
                 min_d = dist
                 this.p2 = g;
             }

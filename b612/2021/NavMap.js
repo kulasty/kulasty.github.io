@@ -71,7 +71,7 @@ class NavMap{
             let last = undefined;
             while(k<PI2){
                 let dst = this._spawn(who,p,k);
-                if (last===undefined || (last.dst!=dst.dst && last.steps!=dst.steps )){
+                if (last===undefined || last.dst!==dst.dst){
                     map.push({...dst,k:k});
                 }
                 last = dst;

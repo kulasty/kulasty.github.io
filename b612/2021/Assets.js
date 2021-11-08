@@ -19,4 +19,5 @@ var txr2d = {
     latern:   _createTexture("latern.png"),
     latern_lit:   _createTexture("latern_lit.png"),
     frost:   _createTexture("frost.png"),
+    portal: _createTexture("portal_off.png"),
 }

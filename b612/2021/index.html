@@ -203,7 +203,7 @@ function render(){
         cnt_frame+=1;
 
         if (!document.getElementById("overlay").classList.contains("hidden"))
-        if ((cnt_frame%4==0)){
+        if ((cnt_frame%2==0)){
             gx_overlay.clearRect(0, 0, 800, 800);            
 
             var astar = staratlas[atlas_name];
@@ -221,6 +221,27 @@ function render(){
                     if (planets[i]===p) return i;
                 }
                 return -1;
+            }
+
+            let prediction = undefined;
+            let actor = undefined;
+            {
+                let atlas_name_map = {"fox":fox, "star": star, "prince": prince, "sheep": sheep}
+                actor = atlas_name_map[atlas_name];
+                
+                let angle = actor.rotation-PI05; //Math.atan2(v.y,v.x)+Math.PI;
+                prediction = astar.getDestinationFromPlanet(getTruePlanet(actor),angle);
+
+                if (prediction!==undefined){
+                    let p = prediction.dst;
+                    if (p!==undefined){
+                        prediction = p;
+                        gx_disk(gx_overlay,
+                                p.globalPosition.x, p.globalPosition.y, p.radius, 'rgba(255,255,0,0.3)',
+                                p.globalRotation, p.globalRotation + PI2-0.1
+                            );
+                    }
+                }
             }
 
             for(let p of planets)
@@ -245,8 +266,11 @@ function render(){
                                 r2 = 120;
                             }
                             if (h1.dst===p){
-                                style = 'rgba(255,255,128,0.3)'
+                                style = 'rgba(128,255,128,0.3)'
                                 r2 = 30;
+                            }
+                            if (p===getTruePlanet(actor) &&  h1.dst===prediction){
+                                style = 'rgba(255,255,128,0.3)'
                             }
 
                             let k2a = Math.max(k1,k2- 4.0/(p.radius+10));
@@ -267,20 +291,24 @@ function render(){
             }
 
             {
-                let atlas_name_map = {"fox":fox, "star": star, "prince": prince, "sheep": sheep}
-                let actor = atlas_name_map[atlas_name];
-
-                let angle = actor.rotation-PI05; //Math.atan2(v.y,v.x)+Math.PI;
-                let prediction = astar.getDestinationFromPlanet(getTruePlanet(actor),angle);
-
-                if (prediction!==undefined){
-                    let p = prediction.dst;
-                    if (p!==undefined){
-                        gx_disk(gx_overlay,
-                                p.globalPosition.x, p.globalPosition.y, p.radius, 'rgba(255,255,0,0.2)',
-                                p.globalRotation, p.globalRotation + PI2-0.1
-                            );
+                let actors = [fox, star, prince, sheep];
+                for(let a of actors){                    
+                    if (a===undefined || a.behaviour instanceof BeaJump == false){
+                        continue;
                     }
+                    let p = a.behaviour.p2 || a.behaviour.p1;
+                    let x1 = a.globalPosition.x;
+                    let y1 = a.globalPosition.y;
+                    let x2 = p.globalPosition.x;
+                    let y2 = p.globalPosition.y;
+                    let v = MathEx.vector(p.globalPosition, a.globalPosition);
+                    let r = MathEx.vlength(v);
+                    x1 -= v.x/r*a.radius;
+                    y1 -= v.y/r*a.radius;
+                    x2 += v.x/r*p.radius;
+                    y2 += v.y/r*p.radius;
+                    
+                    gx_line(gx_overlay, x1, y1, x2, y2, 'rgba(255,128,255,0.3)');
                 }
             }
         }
@@ -321,7 +349,7 @@ function getPlanet(go){
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function getTruePlanet(go,depth=3){
+function getTruePlanet(go,depth=5){
     if (go===undefined || !depth){
         return undefined;
     }
@@ -650,9 +678,18 @@ function make_intro(){
     var p1 = new GoPlanet(`level1-0-0`,300,400);
     game.objects.solid.push(p1);
     var p2 = new GoPlanet(`level1-0-1`,500,400);
-    game.objects.solid.push(p2);
+    game.objects.solid.push(p2);   
     planets = [p1,p2];
+    let astar = new NavMap();
     astar.process(planets, new GoActor("prince")); // radius required
+    staratlas['prince'] = astar;
+    atlas_name = "prince";
+
+    let portal = new GoActor("portal");
+    game.objects.solid.push(portal);
+    portal.spawnAtPlanet(p2,0);
+    portal.effect = new EfBlink();
+
     prince = new GoActor("prince");
     prince.spawnAtPlanet(p1,0);
     game.objects.solid.push(prince);
@@ -700,6 +737,14 @@ const bgsynth = new Tone.AMSynth({
 			}
 		}).toDestination();
 
+var text_progress = "Loading..."
+
+function progress(text){
+    console.log("progress:", text);
+    text_progress+='.';
+    document.getElementById("fps").innerText = text_progress;
+}
+
 function main(){
 
     console.log("main().enter")
@@ -711,8 +756,8 @@ function main(){
     for(let pn of pnames){
         let vsn = pn;
         let fsn = pn;
-        fetchbatch.push(fetch(`assets/${vsn}.vsh.glsl?`+tick).then(x=>x.text()));
-        fetchbatch.push(fetch(`assets/${fsn}.fsh.glsl?`+tick).then(x=>x.text()));
+        fetchbatch.push(fetch(`assets/${vsn}.vsh.glsl?`+tick).then(x=>{progress(vsn); return x.text();}));
+        fetchbatch.push(fetch(`assets/${fsn}.fsh.glsl?`+tick).then(x=>{progress(fsn); return x.text();}));
     }
     Promise.all(fetchbatch).then((res)=>{
         let programs = [];
@@ -735,8 +780,8 @@ function main(){
 
     make_stars();
 
-    //make_intro();
-    make_demo();
+    make_intro();
+    //make_demo();
 
     animationFrame();
 

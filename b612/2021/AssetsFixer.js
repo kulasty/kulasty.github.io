@@ -31,10 +31,10 @@ function gx_disk(gx,ox,oy,r,c,k1=0,k2=PI2){
 function gx_line(gx, x1, y1, x2, y2, c){
     gx.beginPath();
     gx.strokeStyle = c;
-    gx.lineWidth = 1;
+    gx.lineWidth = 10;
     gx.moveTo(x1,y1);
-    gx.lineTo(x2,y2);
-    gx.stroke();
+    gx.lineTo(x2,y2);    
+    gx.stroke();    
 }
 
 function _createTexture(filename){
