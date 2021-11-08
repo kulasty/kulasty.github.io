@@ -740,13 +740,12 @@ const bgsynth = new Tone.AMSynth({
 var text_progress = "Loading..."
 
 function progress(text){
-    console.log("progress:", text);
     text_progress+='.';
     document.getElementById("fps").innerText = text_progress;
 }
 
 function main(){
-
+    let t1 = perfmon.time;
     console.log("main().enter")
     renderContext = new RendererWebGL(800,800); // FIXME 800
 
@@ -780,15 +779,15 @@ function main(){
 
     make_stars();
 
-    make_intro();
-    //make_demo();
+    //make_intro();
+    make_demo();
 
     animationFrame();
 
 
     gx_overlay = _createGraphics2d("overlay",800,800);
-    
-    console.log("main().exit");
+    let t2 = perfmon.time;
+    console.log("main().exit",t2-t1);
 }
 
 let gx_overlay;

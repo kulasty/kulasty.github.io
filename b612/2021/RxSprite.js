@@ -7,7 +7,14 @@ class RenderSprite {
         this.cadd = V4_TRANSBLACK;
         this.blur = 0.;
     }
-    Render(go){
-       renderContext.RenderSprite(go,renderContext.texas[this.textureName],this.cmul,this.cadd,this.blur); // FIXME
-    }
+    Render(go){      
+       renderContext.RenderQuad(
+            renderContext.texas[this.textureName],
+            {...go.globalPosition,_z: go.z_1},
+            go.scale,
+            go.globalRotation,
+            this.cmul,this.cadd,this.blur,           
+            BLEND_NORMAL
+        );
+    }    
 }

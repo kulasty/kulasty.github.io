@@ -38,8 +38,17 @@ class RenderPlanet {
     Render(go){
         if (this.tex===undefined){
             this.tex = xgl_createTexture(renderContext.gx,_bakePlanet(this));
+            return;
         }
-        renderContext.RenderPlanet(go,this.tex,this.cmul,this.cadd); // FIXME
+        renderContext.RenderQuad2(
+            [this.tex, renderContext.texas.light],
+            {...go.globalPosition,_z: go.z_1},
+            go.scale,
+            [go.globalRotation,go.lightRotation],
+            this.cmul,this.cadd,this.blur,
+            BLEND_NORMAL
+        );
+
     }
 }
 

@@ -33,25 +33,33 @@ function _createGraphics3d(width, height){
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-function xgl_makeProgram(gl,vsh,fsh){
-    var sh = gl.createShader(gl.VERTEX_SHADER);   
-    gl.shaderSource(sh,vsh);
+function xgl_compileShader(gl,source,type){
+    const sh = gl.createShader(type);   
+    gl.shaderSource(sh,source);
     gl.compileShader(sh);
-    console.log("vs:",gl.getShaderInfoLog(sh));
-    const vs = sh;
+    if (!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){
+        const err = `xgl_compileShader: ${gl.getShaderInfoLog(sh)}`;
+        console.log(err);
+        throw new Error(err);
+    }    
+    return sh;
+}
 
-    var sh = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(sh,fsh);
-    gl.compileShader(sh);
-    console.log("fs:",gl.getShaderInfoLog(sh));
-    const ps = sh;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+function xgl_makeProgram(gl,vsh,fsh){
+    const vs = xgl_compileShader(gl,vsh,gl.VERTEX_SHADER);
+    const ps = xgl_compileShader(gl,fsh,gl.FRAGMENT_SHADER);
 
     var prog = gl.createProgram();    
     let params = { prog:prog };
     gl.attachShader(prog, vs);
     gl.attachShader(prog, ps);
     gl.linkProgram(prog);
-    console.log("pg:",gl.getProgramInfoLog(prog));
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        const err = `xgl_makeProgram: ${gl.getProgramInfoLog(prog)}`;
+        throw new Error(err);
+    }
+
     // vertex structure
     params.vp = gl.getAttribLocation(prog,"vp");
     gl.enableVertexAttribArray(params.vp);
@@ -105,6 +113,10 @@ function xgl_createTexture(gl,img){
     return {tex:tex, width:img.width, height:img.height};
 }
 
+const BLEND_NORMAL = 1;
+const BLEND_GLOW = 2;
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -121,7 +133,7 @@ class RendererWebGL {
         this.gx = gl;        
 
         for(let txr in txr2d){
-            console.log(`WebGL.TXR(${txr})`);
+            //console.log(`WebGL.TXR(${txr})`);
             this.texas[txr] = xgl_createTexture(gl,txr2d[txr]);
         }
 
@@ -262,125 +274,86 @@ class RendererWebGL {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    RenderSprite(sprite,tex,cmul,cadd,blur){       
+    RenderQuad(tex,pos,scl,rot,cmul,cadd,blur,blendType){
         const t1 = perfmon.time;
-        let gl = this.gx;
-        var prog = this.progs.sprite;                
-        gl.useProgram(prog.prog);
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, tex.tex);
+        const gl = this.gx;
 
-        const f = sprite.globalRotation;        
-        const p = sprite.globalPosition;
-        const [camx,camy] = [this.camera.ox * sprite.z_1, this.camera.oy * sprite.z_1];
-        const [px,py] = [p.x + camx, p.y + camy];        
-        
-        const itemsize = sprite.globalScale;
-        //gl.uniform2f(prog.rot_bck, Math.cos(f), Math.sin(f));
-        gl.uniform2f(prog.rot_bck, f, f);
+        let prog = undefined;
+        if (blendType===BLEND_NORMAL){
+            prog = this.progs.sprite;
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            if(this.rt_this === this.rt_screen){
+                blur = 0;
+            }    
+        }else
+        if (blendType===BLEND_GLOW){            
+            prog = this.progs.glow;
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE);            
+        }else{
+            throw new Error("Invalid blend mode: " + blendType);
+        }
+        gl.enable(gl.BLEND)
+        gl.useProgram(prog.prog);
+
+        const [camx,camy] = [this.camera.ox * pos._z, this.camera.oy * pos._z];
+        const [px,py] = [pos.x + camx, pos.y + camy];        
         gl.uniform2f(prog.pos, px*this.cfx-1., 1.-py*this.cfy);
-        gl.uniform2f(prog.scale,tex.width*this.cfx*itemsize,tex.height*this.cfy*itemsize);
+        gl.uniform2f(prog.scale,tex.width*this.cfx*scl,tex.height*this.cfy*scl);
         gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
         gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
+        //gl.uniform2f(prog.rot_bck, Math.cos(rot), Math.sin(rot));
+        gl.uniform2f(prog.rot_bck, rot, rot);
+
         gl.uniform1f(prog.ftime,this.ftime);
-        if(this.rt_this === this.rt_screen){
-            blur = 0;
-        }
         gl.uniform1f(prog.blur,blur);
 
-        /*
-        try{
-            const uvx = sprite.behaviour.v.x;
-            const uvy = sprite.behaviour.v.y;
-            gl.uniform2f(prog.uv_ofs,uvx,uvy);
-            //cmul = [1,0,0,1];
-            gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
-        }catch(e){
-            gl.uniform2f(prog.uv_ofs,0.,0.);
-        }
-        */
-
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);         
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        perfmon.watch("gl",t1);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    RenderGlow(sprite,tex,cmul,cadd,blur){       
-        const t1 = perfmon.time;
-        let gl = this.gx;
-        var prog = this.progs.glow;
-        gl.useProgram(prog.prog);
         gl.activeTexture(gl.TEXTURE2);
         gl.bindTexture(gl.TEXTURE_2D, tex.tex);
-
-        const f = sprite.globalRotation;        
-        const p = sprite.globalPosition;
-        const [camx,camy] = [this.camera.ox * sprite.z_1, this.camera.oy * sprite.z_1];
-        const [px,py] = [p.x + camx, p.y + camy];        
-        
-        const itemsize = sprite.globalScale;
-        //gl.uniform2f(prog.rot_bck, Math.cos(f), Math.sin(f));
-        gl.uniform2f(prog.rot_bck, f, f);
-        gl.uniform2f(prog.pos, px,py )//px*this.cfx-1., 1.-py*this.cfy);
-        gl.uniform2f(prog.scale,tex.width*this.cfx*itemsize,tex.height*this.cfy*itemsize);
-        gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
-        gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
-        gl.uniform1f(prog.ftime,this.ftime);
-        gl.uniform1f(prog.blur,blur);
-
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
         perfmon.watch("gl",t1);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    RenderPlanet(planet,tex,cmul,cadd){
+    RenderQuad2(texs,pos,scl,rots,cmul,cadd,blur,blendType){
         const t1 = perfmon.time;
+        const gl = this.gx;
 
-          
-        let gl = this.gx;
-
-        let tx_bck = this.texas.planet;
-        let tx_lit = this.texas.light;   
-    
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, tx_bck.tex);
-
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, tx_lit.tex);
-        
-        var prog = this.progs.planet;
+        let prog = undefined;
+        if (blendType===BLEND_NORMAL){
+            prog = this.progs.planet;
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            if(this.rt_this === this.rt_screen){
+                blur = 0;
+            }    
+        }else{
+            throw new Error("Invalid blend mode: " + blendType);
+        }
+        gl.enable(gl.BLEND)
         gl.useProgram(prog.prog);
 
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, tex.tex);      
-        
-        const itemsize = planet.scale;
-        gl.uniform2f(prog.scale,tex.width*this.cfx*itemsize,tex.height*this.cfy*itemsize);
+        const tex = texs[0];
+        const [camx,camy] = [this.camera.ox * pos._z, this.camera.oy * pos._z];
+        const [px,py] = [pos.x + camx, pos.y + camy];        
+        gl.uniform2f(prog.pos, px*this.cfx-1., 1.-py*this.cfy);
+        gl.uniform2f(prog.scale,tex.width*this.cfx*scl,tex.height*this.cfy*scl);
         gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
         gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
-        
-        var k1 = planet.globalRotation;
-        var k2 = planet.lightRotation;
-        const p = planet.globalPosition;
-        const [camx,camy] = [this.camera.ox*planet.z_1, this.camera.oy*planet.z_1];
-        p.x+=camx;
-        p.y+=camy;
-                
-        gl.uniform2f(prog.rot_bck, Math.cos(k1), Math.sin(k1));
-        gl.uniform2f(prog.rot_lit, Math.cos(k2), Math.sin(k2));
-        gl.uniform2f(prog.pos, p.x*this.cfx-1.,1-p.y*this.cfy);
+        //gl.uniform2f(prog.rot_bck, Math.cos(rot), Math.sin(rot));
+        gl.uniform2f(prog.rot_bck, Math.cos(rots[0]), Math.sin(rots[0]));
+        gl.uniform2f(prog.rot_lit, Math.cos(rots[1]), Math.sin(rots[1]));
 
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);  
+        gl.uniform1f(prog.ftime,this.ftime);
+        gl.uniform1f(prog.blur,blur);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texs[0].tex);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, texs[1].tex);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
         perfmon.watch("gl",t1);
-
-        return;
     }
+
 
 }
