@@ -56,8 +56,8 @@ class BeaStand {
         this.angle = angle;
         this.planet = planet;
 
-        planet.Schedule(GameEvent.TOUCHDOWN,{msg:"as_planet"});
-        actor.Schedule(GameEvent.TOUCHDOWN,{msg:"as_actor"});
+        planet.Schedule(GameEvent.TOUCHDOWN,{msg:"as_planet", who:actor});
+        actor.Schedule(GameEvent.TOUCHDOWN,{msg:"as_actor", who:actor});
     }
     Update(go){
         const planet = this.planet;

@@ -295,12 +295,13 @@ class RendererWebGL {
         gl.enable(gl.BLEND)
         gl.useProgram(prog.prog);
 
-        const [camx,camy] = [this.camera.ox * pos._z, this.camera.oy * pos._z];
-        const [px,py] = [pos.x + camx, pos.y + camy];        
-        gl.uniform2f(prog.pos, px*this.cfx-1., 1.-py*this.cfy);
-        gl.uniform2f(prog.scale,tex.width*this.cfx*scl,tex.height*this.cfy*scl);
+        const [camx,camy] = [this.camera.ox * pos._z , this.camera.oy * pos._z];
+        const [px,py] = [pos.x  + camx, pos.y  + camy];
+        const cscale = this.cfx*this.camera.zoom;
+        gl.uniform2f(prog.pos, px*cscale-1., 1.-py*cscale);
+        gl.uniform2f(prog.scale,tex.width*cscale*scl,tex.height*cscale*scl);
         gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
-        gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
+        gl.uniform4fv(prog.cadd,cadd);
         //gl.uniform2f(prog.rot_bck, Math.cos(rot), Math.sin(rot));
         gl.uniform2f(prog.rot_bck, rot, rot);
 
@@ -334,11 +335,12 @@ class RendererWebGL {
 
         const tex = texs[0];
         const [camx,camy] = [this.camera.ox * pos._z, this.camera.oy * pos._z];
-        const [px,py] = [pos.x + camx, pos.y + camy];        
-        gl.uniform2f(prog.pos, px*this.cfx-1., 1.-py*this.cfy);
-        gl.uniform2f(prog.scale,tex.width*this.cfx*scl,tex.height*this.cfy*scl);
+        const [px,py] = [pos.x + camx, pos.y  + camy];
+        const cscale = this.cfx*this.camera.zoom;
+        gl.uniform2f(prog.pos, px*cscale-1., 1.-py*cscale);
+        gl.uniform2f(prog.scale,tex.width*cscale*scl,tex.height*cscale*scl);
         gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
-        gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
+        gl.uniform4fv(prog.cadd,cadd);
         //gl.uniform2f(prog.rot_bck, Math.cos(rot), Math.sin(rot));
         gl.uniform2f(prog.rot_bck, Math.cos(rots[0]), Math.sin(rots[0]));
         gl.uniform2f(prog.rot_lit, Math.cos(rots[1]), Math.sin(rots[1]));

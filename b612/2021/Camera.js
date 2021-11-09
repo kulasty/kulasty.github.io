@@ -9,6 +9,7 @@ class Camera {
         this.cf = 0;
         this.opacity = 1.0;
         this.mixcoef = mixcoef;
+        this.zoom = 1.0;
     }
 
     Update(){
