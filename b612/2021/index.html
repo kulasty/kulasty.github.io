@@ -111,7 +111,8 @@ let time_multiplier = 1.0;
 
 var cam_back = new Camera(0);
 var cam_front = new Camera(0);
-var cam_player = new Camera(0.5);
+var cam_player = new Camera(1);
+cam_player.zoom = 2.0;
 var camera = cam_front;
 var game = new Game();
 Game.currentGame = game;
@@ -135,6 +136,7 @@ function make_stars(){
     bg.z_1 = 0.1;
     bg.effect = new Effect();
     bg.effect.cadd = [0,0,0,0.5];
+    ///return;
         
     stars = [];
 
