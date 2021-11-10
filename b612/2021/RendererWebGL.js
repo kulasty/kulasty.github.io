@@ -276,7 +276,7 @@ class RendererWebGL {
     set_cam(prog,tex,pos,scl){
         const gl = this.gx;
         const [camx,camy] = [this.camera.ox , this.camera.oy];
-        const zoom = camera.zoom;
+        const zoom = this.camera.zoom;
         const [px,py] = [pos.x + camx + (800./zoom-800.)/2, pos.y + camy + (800./zoom-800.)/2]; //[pos.x + (800./zoom-800.)/2. + camx, pos.y + (800./zoom-800.)/2. + camy];
         const cs = this.cfx*zoom;
         gl.uniform2f(prog.pos, px*cs-1., 1.-py*cs);
