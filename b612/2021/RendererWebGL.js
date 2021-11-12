@@ -273,16 +273,6 @@ class RendererWebGL {
         perfmon.watch("gl",t1);
     }
 
-    set_cam(prog,tex,pos,scl){
-        const gl = this.gx;
-        const [camx,camy] = [this.camera.ox , this.camera.oy];
-        const zoom = this.camera.zoom;
-        const [px,py] = [pos.x + camx + (800./zoom-800.)/2, pos.y + camy + (800./zoom-800.)/2]; //[pos.x + (800./zoom-800.)/2. + camx, pos.y + (800./zoom-800.)/2. + camy];
-        const cs = this.cfx*zoom;
-        gl.uniform2f(prog.pos, px*cs-1., 1.-py*cs);
-        gl.uniform2f(prog.scale,tex.width*cs*scl,tex.height*cs*scl);
-    }
-
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
     RenderQuad(tex,pos,scl,rot,cmul,cadd,blur,blendType){
         const t1 = perfmon.time;
@@ -305,7 +295,10 @@ class RendererWebGL {
         gl.enable(gl.BLEND)
         gl.useProgram(prog.prog);
 
-        this.set_cam(prog,tex,pos,scl);
+        const [px,py] = [pos.x + this.camera.zx*pos._z, pos.y + this.camera.zy*pos._z]; 
+        const cs = this.cfx*this.camera.zoom;
+        gl.uniform2f(prog.pos, px*cs-1., 1.-py*cs);
+        gl.uniform2f(prog.scale,tex.width*cs*scl,tex.height*cs*scl);
 
         gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
         gl.uniform4fv(prog.cadd,cadd);
@@ -340,7 +333,10 @@ class RendererWebGL {
         gl.enable(gl.BLEND)
         gl.useProgram(prog.prog);
 
-        this.set_cam(prog,texs[0],pos,scl);
+        const [px,py] = [pos.x + this.camera.zx*pos._z, pos.y + this.camera.zy*pos._z]; 
+        const cs = this.cfx*this.camera.zoom;
+        gl.uniform2f(prog.pos, px*cs-1., 1.-py*cs);
+        gl.uniform2f(prog.scale,texs[0].width*cs*scl,texs[0].height*cs*scl);
 
         gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]*this.camera.opacity);
         gl.uniform4fv(prog.cadd,cadd);

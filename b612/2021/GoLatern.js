@@ -1,3 +1,5 @@
+"use strict";
+
 class RenderLatern {
     constructor(){
         this.cmul = V4_SOLIDWHITE;

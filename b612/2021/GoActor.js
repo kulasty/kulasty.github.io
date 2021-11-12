@@ -2,8 +2,8 @@
 
 //const JUMP_STRENGTH = 3;
 const JUMP_STRENGTH = 6;
-const DUMP_VELOCITY = 0.999;
-//const DUMP_VELOCITY = 0.998;
+const DUMP_VELOCITY = 0.9985;
+//const DUMP_VELOCITY = 0.999;
 
 const CLR_SHADOW = [0x37/256.0, 0x18/256.0, 0x42/256.0];
 
@@ -102,12 +102,12 @@ class BeaJump {
         if (x>800) x-=800; else if (x<0) x+=800;
         if (y>800) y-=800; else if (y<0) y+=800;
         go.position = {x:x,y:y};
-
-        let line = MathEx.vector(p,(this.p2||this.p1).globalPosition);
+        let pp = (this.p2??this.p1);
+        let line = MathEx.vector(p,pp.globalPosition);
         let dist = MathEx.vlength(line);
         let f = {x:line.x/dist, y:line.y/dist};
-        let cf = this.p2?0.1:0.05; // WTF, how this works??
-        this.v.x = this.v.x*DUMP_VELOCITY + f.x*cf;
+        let cf = this.p2?0.1:0.05; // WTF, how this works??        
+        this.v.x = this.v.x*DUMP_VELOCITY+ f.x*cf;
         this.v.y = this.v.y*DUMP_VELOCITY + f.y*cf;
         if (this.p2!==undefined){
             let angle = Math.atan2(line.y,line.x) - PI05

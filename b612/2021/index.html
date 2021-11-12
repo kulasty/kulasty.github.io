@@ -44,10 +44,6 @@
 <!-- http://davidbau.com/archives/2010/01/30/random_seeds_coded_hints_and_quintillions.html -->
 <script src="./vendor/seedrandom.js"> </script>
 
-<!-- https://github.com/mrdoob/stats.js 
-<script src="./vendor/stats.js"></script>
--->
-
 <!-- https://tonejs.github.io/ -->
 <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
 
@@ -75,6 +71,12 @@
 <script src="NavMap.js"></script>
 <script src="GameObjectController.js"></script>
 
+<script src="Level.js"></script>
+<script src="LvZen.js"></script>
+
+
+<script src="DebugOverlay.js"></script>
+
 <script>
 
 "use strict";
@@ -84,6 +86,20 @@ const RM_HIRES = "hires";
 const RM_RETRO = "retro";
 var renderMode = RM_HIRES;
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function setRes(sx,sy,crisp){
+    let canvas = document.getElementById("display");    
+    canvas.width = sx;
+    canvas.height= sy;
+    if (crisp){
+        canvas.classList.add("crisp");
+    }else{
+        canvas.classList.remove("crisp");
+    }
+    renderContext.rt_screen.vp = {sx:sx,sy:sy};
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function setRenderMode(mode){    
     if (mode==renderMode){
         return;
@@ -98,9 +114,45 @@ function setRenderMode(mode){
     }
 }
 
-var player = undefined;
-var planets = [];
-var stars = [];
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function setFullScreen() {
+    var doc = window.document;
+    var docEl = doc.documentElement;
+    docEl = document.getElementById("display");
+
+    var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+    var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+    if(!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+        requestFullScreen.call(docEl);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function toggleOverlay() {
+    let overlay = document.getElementById("overlay");
+    if (overlay.classList.contains("hidden")){
+        overlay.classList.remove("hidden");
+    }else{
+        overlay.classList.add("hidden");
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function toggleFullScreen() {
+    var doc = window.document;
+    var docEl = doc.documentElement;
+    docEl = document.getElementById("display");
+
+    var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+    var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+    if(!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+        requestFullScreen.call(docEl);
+    }else{
+        cancelFullScreen.call(doc);
+    }
+}
 
 var tsecond = 0
 var time_for_physics = 0;
@@ -108,228 +160,40 @@ var time_for_frames = 0;
 const time_step = 10;
 let time_multiplier = 1.0;
 
-
-var cam_back = new Camera(0);
-var cam_front = new Camera(1);
+var cam_back = new Camera(0.5,0.0001);
+var cam_front = new Camera(1.,0.01);
 var follow_player = false;
 var game = new Game();
 Game.currentGame = game;
 let cnt_frame = 0;
 
-let retro, latern, box, scarf, bush, portal;
-let star, prince, fox, sheep, rose;
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-var bg
-// make background
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function make_stars(){
-    bg = new GameObject();
-    game.objects.background.push(bg);
-    bg.renderer = new RenderSprite("bg");
-    bg.position = {x:400,y:400};
-    bg.scale = 2;
-    bg.z_1 = 0.1;
-    bg.effect = new Effect();
-    bg.effect.cadd = [0,0,0,0.5];
-    ///return;
-        
-    stars = [];
-
-    Math.seedrandom("starfield");
-    for(let i=0;i<50;i++){
-        let go = new GoStar();
-        game.objects.background.push(go);
-        go.position = {x:MathEx.randRange(10,790), y:MathEx.randRange(10,790)};
-        go.s = MathEx.randRange(0.03,0.075);
-        go.k = MathEx.randomAngle();       
-        go.z_1 = MathEx.randRange(0.2,0.7); 
-        stars.push(go);
-    }
-
-    let piasecki = [[174,215],[326,259],[370,325],[430,379],[600,450],[535,524],[406,468]];
-    for(let i in piasecki){
-        let [x,y] = piasecki[i];
-        let go = new GoStar();
-        game.objects.background.push(go);
-        go.position = {x:x,y:y+20};
-        go.s = 0.2;
-        go.k = MathEx.randomAngle(); //-i*0.05;
-        go.z_1 = 0.2; 
-    }
-
-}    
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class EfRGB extends Effect{
-    static Red = new EfRGB([1,0,0]);
-    static Blu = new EfRGB([0,0,1]);
-    static Mag = new EfRGB([1,0,1]);
-    constructor(rgb){
-        super();
-        this.cmul = rgb.concat([1,]);
-        this.cadd = rgb.concat([0,]);
-    }
-    Apply(go){
-        go.renderer.cmul = this.cmul;
-        go.renderer.cadd = this.cadd;
-    }
-}
-
-
-var atlas_name = "star";
-
 // Game.render
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function render(){
     var t1 = perfmon.time;
-    stats.beginSeg("rx");
 
-    if (latern!==undefined) {
-        let t = latern.globalPosition;
-        for(let p of planets){
-            const pos = p.globalPosition;
-            p.lightRotation = Math.PI*0.7+Math.atan2(t.y-pos.y,t.x-pos.x);
-        }
-    }else{        
-        for(let p of planets){
-            const pos = p.globalPosition;
-            const t = mouse;
-            p.lightRotation = Math.PI*0.7+Math.atan2(t.y-pos.y,t.x-pos.x);
-        }
-    }
-
+    game.Render();
 
     if (renderContext.BeginScene()){
         cnt_frame+=1;
+        DebugOverlay_Render(game)
 
-        if (!document.getElementById("overlay").classList.contains("hidden"))
-        if ((cnt_frame%2==0)){
-            gx_overlay.clearRect(0, 0, 800, 800);            
-
-            var astar = staratlas[atlas_name];
-            
-            for(let p of game.objects.solid){
-                gx_circle(gx_overlay,
-                    p.globalPosition.x, p.globalPosition.y, p.radius, 'rgba(255,128,255,0.7)',
-                    p.globalRotation, p.globalRotation + PI2-0.1
-                );
-
-            }
-
-            let planetindex = function(p){
-                for(let i in planets){
-                    if (planets[i]===p) return i;
-                }
-                return -1;
-            }
-
-            let prediction = undefined;
-            let actor = undefined;
-            {
-                let atlas_name_map = {"fox":fox, "star": star, "prince": prince, "sheep": sheep}
-                actor = atlas_name_map[atlas_name];
-                
-                let angle = actor.rotation-PI05; //Math.atan2(v.y,v.x)+Math.PI;
-                prediction = astar.getDestinationFromPlanet(getTruePlanet(actor),angle);
-
-                if (prediction!==undefined){
-                    let p = prediction.dst;
-                    if (p!==undefined){
-                        prediction = p;
-                        gx_disk(gx_overlay,
-                                p.globalPosition.x, p.globalPosition.y, p.radius, 'rgba(255,255,0,0.3)',
-                                p.globalRotation, p.globalRotation + PI2-0.1
-                            );
-                    }
-                }
-            }
-
-            for(let p of planets)
-            {
-                //let p = planets[0];
-                let seg = [];
-                let gx = gx_overlay;
-                for(let hit of astar.maps[p]){
-                    let dst = hit.dst;
-                    let k = hit.k;
-                    seg.push(hit);
-                    if (seg.length>1){                        
-                        gx.beginPath();
-                        var [h1,h2] = seg;
-                        let k1 = h1.k + 0.01;
-                        let k2 = h2.k - 0.01;
-                        if (k1<k2){
-                            let style = 'rgba(128,128,255,0.3)'
-                            let r2 = 40+planetindex(h1.dst)*5;
-                            if (h1.dst===undefined){
-                                style = 'rgba(255,128,128,0.3)'
-                                r2 = 120;
-                            }
-                            if (h1.dst===p){
-                                style = 'rgba(128,255,128,0.3)'
-                                r2 = 30;
-                            }
-                            if (p===getTruePlanet(actor) &&  h1.dst===prediction){
-                                style = 'rgba(255,255,128,0.3)'
-                            }
-
-                            let k2a = Math.max(k1,k2- 4.0/(p.radius+10));
-                            let k2b = Math.max(k1,k2- 4.0/(p.radius+r2));                        
-
-                            gx.arc(p.globalPosition.x,p.globalPosition.y,p.radius+10,k1,k2a,false);
-                            gx.arc(p.globalPosition.x,p.globalPosition.y,p.radius+r2,k2b,k1,true);
-                            gx.closePath();                        
-                            gx.strokeStyle = style;
-                            gx.stroke();
-                            gx.fillStyle = style;
-                            gx.fill();
-                        }
-                        seg.shift();
-                        
-                    }                    
-                }
-            }
-
-            {
-                let actors = [fox, star, prince, sheep];
-                for(let a of actors){                    
-                    if (a===undefined || a.behaviour instanceof BeaJump == false){
-                        continue;
-                    }
-                    let p = a.behaviour.p2 || a.behaviour.p1;
-                    let x1 = a.globalPosition.x;
-                    let y1 = a.globalPosition.y;
-                    let x2 = p.globalPosition.x;
-                    let y2 = p.globalPosition.y;
-                    let v = MathEx.vector(p.globalPosition, a.globalPosition);
-                    let r = MathEx.vlength(v);
-                    x1 -= v.x/r*a.radius;
-                    y1 -= v.y/r*a.radius;
-                    x2 += v.x/r*p.radius;
-                    y2 += v.y/r*p.radius;
-                    
-                    gx_line(gx_overlay, x1, y1, x2, y2, 'rgba(255,128,255,0.3)');
-                }
-            }
-        }
-
+        const player = game.player;
         {
             let cam_target = player;
-            if (player.behaviour instanceof BeaStand){
+            if (player?.behaviour instanceof BeaStand){
                 cam_target = getTruePlanet(player);
             }    
-            if (player.behaviour instanceof BeaJump){
+            if (player?.behaviour instanceof BeaJump){
                 cam_target = player.behaviour.p2 || player.behaviour.p1;
             }    
             cam_front.setTarget(follow_player ? cam_target : undefined);
             cam_front.Update();
+            cam_back.setTarget(cam_target );
             cam_back.Update();
         }
                 
-        renderContext.camera = cam_back;
+        renderContext.camera = cam_back;        
         GameObject.RenderAll(game.objects.background);
                 
         renderContext.camera = cam_front;
@@ -339,7 +203,6 @@ function render(){
     }
     
     perfmon.watch("rx",t1);
-    stats.endSeg("rx");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -379,7 +242,7 @@ function physics(dt){
     time_for_physics=Math.max(Math.min(300,time_for_physics+dt),0);
     while(time_for_physics>time_step){
         let t1 = perfmon.time;
-        stats.beginSeg("ph");
+
         time_for_physics-=time_step;
         
         GameObject.UpdateAll(game.objects.background);
@@ -389,11 +252,6 @@ function physics(dt){
             go.DispatchAll();
         }
 
-        if (player===undefined){
-            continue;
-        }
-
-        stats.endSeg("ph");
         perfmon.watch("ph",t1);
     }
 }
@@ -405,33 +263,22 @@ function physics(dt){
 let ts1, ts2;
 
 const MS_PER_FRAME = 1000/50;
-let cnt_frames = 0;
 
 function szround(v,m){
     return Math.round(m*v)/m;
 }
 
-//var stats = new Stats();
-var stats = {
-     beginSeg: function(){},
-     endSeg: function(){},
-     dom: undefined,
-     begin: function(){},
-     end: function(){},
-     showPanel: function(){},
-     reset: function(){},
-};
 
-function animationFrame(timestamp){
-    
-    stats.begin();
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function animationFrame(timestamp){    
     try{
         timestamp = perfmon.time;
         if (ts1===undefined){
             ts1 = timestamp;
             ts2 = timestamp;
-        }   
+        }
+        
+        // physics and render
         { 
             const dt = ts2-ts1;
             //let cfdt = Math.sin(perfmon.time*0.001);
@@ -440,11 +287,11 @@ function animationFrame(timestamp){
             time_for_frames=Math.min(120,time_for_frames+dt);
             while(time_for_frames>MS_PER_FRAME){
                 render();
-                cnt_frames+=1;
                 time_for_frames-=MS_PER_FRAME;
             }
         }
 
+        // stats
         {
             let dt = perfmon.time - tsecond 
             if (dt>1000){
@@ -459,14 +306,15 @@ function animationFrame(timestamp){
                 const prdx = time_in_rdx*100/time_in_frame;
                 const pglx = time_in_glx*100/time_in_rdx;
                 if (pload>0){
-                    document.getElementById("fps").innerHTML = `CPU:${szround(pload,100)}% R:${metrics.rx.length}#${szround(prdx,100)}% (${szround(pglx,100)}%) P:${szround(pphy,100)}%`
+                    //document.getElementById("fps").innerHTML = `CPU:${szround(pload,100)}% R:${metrics.rx.length}#${szround(prdx,100)}% (${szround(pglx,100)}%) P:${szround(pphy,100)}%`
+                    document.getElementById("fps").innerHTML =
+                        `CPU:${szround(pload,100)}% ${szround(dt,100)}ms #:${szround(time_in_frame,100)}ms R:${szround(time_in_rdx,100)}ms ? ${szround(time_in_glx,100)}ms  P:${szround(time_in_phy,100)}ms`
                 }else{
                     document.getElementById("fps").innerHTML = '';
                 }
 
                 perfmon.reset();
                 tsecond = perfmon.time;
-                stats.reset();
             }
         }
 
@@ -480,416 +328,8 @@ function animationFrame(timestamp){
         throw e;
     }
 
-    stats.end();
 }
 
-
-function shuffle(array) {
-  let currentIndex = array.length,  randomIndex;
-
-  // While there remain elements to shuffle...
-  while (currentIndex != 0) {
-
-    // Pick a remaining element...
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
-
-    // And swap it with the current element.
-    [array[currentIndex], array[randomIndex]] = [
-      array[randomIndex], array[currentIndex]];
-  }
-
-  return array;
-}
-
-
-
-var staratlas = {};
-
-function make_demo(){
-
-    // setup planets
-    planets = []
-    for(let y=0;y<3;y++){
-        var nx = 3;
-        if (y==1) {nx = 4;}
-        for(let x=0;x<nx;x++)    
-        {
-            let p = new GoPlanet(`level1-${x}-${y}`,(x+1-(y%2)*0.5)*200,(y-1+0.5)*230+400-230*0.5);
-            p.position.x+=Math.random()*20-10;
-            p.position.y+=Math.random()*20-10;
-            planets.push(p)
-            game.objects.solid.push(p);
-        }
-    }    
-
-    // create navmaps
-    let actors = ['star','prince','fox','sheep'];
-    for(let actorname of actors){
-        var astar = new NavMap();
-        console.log("NavMap",actorname);
-        astar.process(planets, new GoActor(actorname)); // radius required
-        staratlas[actorname] = astar;
-    }
-
-    // create "posters"
-    
-
-    function frost_slow(){
-        time_multiplier = Math.max(0.2,time_multiplier - 0.3);
-        console.log("time_multiplier",time_multiplier);
-    }
-    function frost_speed(){
-        time_multiplier = Math.min(1,time_multiplier + 0.3);
-        console.log("time_multiplier",time_multiplier);
-    }
-
-    for(let i=0;i<3;i++){
-        let frost = new GoActor("frost");
-        game.objects.solid.push(frost);
-        frost.spawnAtPlanet(planets[5],MathEx.randomAngle());    
-        frost.queue = [];
-        frost.addHandler(GameEvent.TOUCHDOWN,frost_slow);
-        frost.addHandler(GameEvent.JUMP,frost_speed);
-    }
-    planets[5].queue = [];
-    planets[5].addHandler(GameEvent.TOUCHDOWN,frost_slow);
-    planets[5].addHandler(GameEvent.JUMP,frost_speed);    
-
-    retro = new GoActor("retro");
-    game.objects.solid.push(retro);
-    retro.spawnAtPlanet(planets[planets.length-1],MathEx.randomAngle())
-
-    scarf = new GoActor("scarf");
-    game.objects.solid.push(scarf);
-    scarf.spawnAtPlanet(planets[planets.length-2],MathEx.randomAngle());
-
-    bush = new GoActor("bush");
-    game.objects.solid.push(bush);
-    bush.spawnAtPlanet(planets[planets.length-3],MathEx.randomAngle());
-
-    portal = new GoPortal();
-    game.objects.solid.push(portal);
-    portal.spawnAtPlanet(planets[0],0);
-    portal.effect = new EfBlink();
-    
-    // create actors
-    prince = new GoActor("prince");    
-    game.objects.solid.push(prince);
-    prince.spawnAtPlanet(planets[0],MathEx.randomAngle());    
-
-    fox = new GoActor("fox");
-    game.objects.solid.push(fox);
-    fox.spawnAtPlanet(planets[1],MathEx.randomAngle())   
-
-    sheep = new GoActor("sheep");
-    game.objects.solid.push(sheep);
-    sheep.spawnAtPlanet(planets[2],MathEx.randomAngle());
-
-    box = new GoActor("box");
-    game.objects.solid.push(box);
-    box.spawnAtPlanet(planets[1],MathEx.randomAngle());
-    box.radius*=0.7;
-
-    star = new GoActor("star")    
-    game.objects.solid.push(star);
-    star.spawnAtPlanet(planets[planets.length-4],MathEx.randomAngle());    
-
-    rose = new GoActor("rose");
-    game.objects.solid.push(rose);
-    rose.effect = new EfBlink();
-    rose.spawnAtPlanet(planets[3],MathEx.randomAngle());
-
-    
-    // put lattern last as it glows
-
-    latern = new GoLatern();
-    game.objects.solid.push(latern);
-    latern.spawnAtPlanet(planets[4],MathEx.randomAngle());    
-
-    let me = planets[4];
-    me.addHandler(GameEvent.TOUCHDOWN,function(){
-        latern.lit+=1;
-        console.log("platern+",latern.lit);
-    });
-    me.addHandler(GameEvent.JUMP,function(){
-        latern.lit-=1;
-        console.log("platern-",latern.lit);
-    });
-
-    latern.addHandler(GameEvent.TOUCHDOWN, function(me){
-        me.lit+=1;
-        console.log("latern+",me.lit);
-    });
-    latern.addHandler(GameEvent.JUMP, function(me){
-        me.lit-=1;
-        console.log("latern-",me.lit);
-    });
-
-
-    // setup logic
-    player = star;
-    player.addHandler(GameEvent.JUMP,function(){
-        console.log("Player.JUMP");
-        //navigator.vibrate(30);
-        //synth.triggerAttack("C3");        
-    });
-    player.addHandler(GameEvent.TOUCHDOWN,function(that,args){
-        console.log("Player.TDOWN",args);
-        //navigator.vibrate(30);
-        //synth.triggerRelease();
-        
-        let planet = getPlanet(that);
-        if (planet===getPlanet(retro) || planet===retro){
-            let mode = RM_HIRES;
-            if (renderMode == mode) mode = RM_RETRO;
-            setRenderMode(mode);
-        }    
-    });
-
-    player.addHandler(GameEvent.TOUCHDOWN, function(){
-        let rosePlanet = getTruePlanet(rose);        
-        if (rosePlanet!==undefined && rosePlanet === getTruePlanet(player)){
-            rose.jump();
-        }
-
-        let portalPlanet = getTruePlanet(portal);
-        if (portalPlanet!==undefined && portalPlanet === getTruePlanet(player)){
-            follow_player = true;
-            cam_front.zoom = 1.5;
-            console.log('camera on player');
-        }
-    });
-
-    player.addHandler(GameEvent.JUMP, function(){
-        let portalPlanet = getTruePlanet(portal);
-        if (portalPlanet!==undefined && portalPlanet === getTruePlanet(player)){
-            follow_player = false;
-            cam_front.zoom = 1.;
-            console.log('camera on front');
-        }
-    });
-
-    rose.addHandler(GameEvent.TOUCHDOWN, function(){
-        let rosePlanet = getTruePlanet(rose)
-        if (rosePlanet!==undefined && rosePlanet === getTruePlanet(player)){
-            rose.jump();
-        }
-    })
-
-    fox.controller = new GocFollow(prince);
-    sheep.controller = new GocFollow(star);
-    prince.controller = new GocFollow(rose);
-    
-    GameObject.UpdateAll(game.objects.solid);
-
-    //ai_random(fox);
-    //ai_random(prince);
-    //ai_random(sheep);
-   
-}
-
-
-function make_zen(){
-
-    // setup planets
-    planets = []
-    for(let y=0;y<3;y++){
-        var nx = 3;
-        if (y==1) {nx = 4;}
-        for(let x=0;x<nx;x++)    
-        {
-            let p = new GoPlanet(`level1-${x}-${y}`,(x+1-(y%2)*0.5)*200,(y-1+0.5)*230+400-230*0.5);
-            p.position.x+=Math.random()*20-10;
-            p.position.y+=Math.random()*20-10;
-            planets.push(p)
-            game.objects.solid.push(p);
-        }
-    }    
-
-    // create navmaps
-    let actors = ['star','prince','fox','sheep'];
-    for(let actorname of actors){
-        var astar = new NavMap();
-        console.log("NavMap",actorname);
-        astar.process(planets, new GoActor(actorname)); // radius required
-        staratlas[actorname] = astar;
-    }
-
-    // create "posters"
-
-    // frost
-    function frost_slow(){
-        time_multiplier = Math.max(0.2,time_multiplier - 0.3);
-        console.log("time_multiplier",time_multiplier);
-    }
-    function frost_speed(){
-        time_multiplier = Math.min(1,time_multiplier + 0.3);
-        console.log("time_multiplier",time_multiplier);
-    }
-
-    for(let i=0;i<3;i++){
-        let frost = new GoActor("frost");
-        game.objects.solid.push(frost);
-        frost.spawnAtPlanet(planets[5],MathEx.randomAngle());    
-        frost.queue = [];
-        frost.addHandler(GameEvent.TOUCHDOWN,frost_slow);
-        frost.addHandler(GameEvent.JUMP,frost_speed);
-    }
-    planets[5].queue = [];
-    planets[5].addHandler(GameEvent.TOUCHDOWN,frost_slow);
-    planets[5].addHandler(GameEvent.JUMP,frost_speed);    
-
-    // retro
-    retro = new GoActor("retro");
-    game.objects.solid.push(retro);
-    retro.spawnAtPlanet(planets[planets.length-1],MathEx.randomAngle())
-
-    // scarf
-    scarf = new GoActor("scarf");
-    game.objects.solid.push(scarf);
-    scarf.spawnAtPlanet(planets[planets.length-2],MathEx.randomAngle());
-
-    // bush
-    bush = new GoActor("bush");
-    game.objects.solid.push(bush);
-    bush.spawnAtPlanet(planets[planets.length-3],MathEx.randomAngle());
-
-    // portal
-    portal = new GoPortal();
-    game.objects.solid.push(portal);
-    portal.spawnAtPlanet(planets[0],0);
-    portal.effect = new EfBlink();
-
-    // box
-    box = new GoActor("box");
-    game.objects.solid.push(box);
-    box.spawnAtPlanet(planets[1],MathEx.randomAngle());
-    box.radius*=0.7;
-
-    GameObject.UpdateAll(game.objects.solid);
-
-    // create actors
-    star = new GoActor("star")    
-    game.objects.solid.push(star);
-    star.spawnAtPlanet(planets[planets.length-4],MathEx.randomAngle());    
-
-    prince = new GoActor("prince");    
-    //game.objects.solid.push(prince);
-    prince.spawnAtPlanet(scarf,scarf.globalRotation+Math.PI);    
-
-    fox = new GoActor("fox");
-    //game.objects.solid.push(fox);
-    fox.spawnAtPlanet(bush,bush.globalRotation+Math.PI)   
-
-    sheep = new GoActor("sheep");
-    //game.objects.solid.push(sheep);
-    sheep.spawnAtPlanet(box,box.globalRotation+Math.PI);
-
-    rose = new GoActor("rose");
-    game.objects.solid.push(rose);
-    rose.effect = new EfBlink();
-    rose.spawnAtPlanet(planets[3],MathEx.randomAngle());
-
-    let rose_index = game.objects.solid.length;
-
-    // put lattern last as it glows
-
-    latern = new GoLatern();
-    game.objects.solid.push(latern);
-    latern.spawnAtPlanet(planets[4],MathEx.randomAngle());    
-
-    let me = planets[4];
-    me.addHandler(GameEvent.TOUCHDOWN,function(){
-        latern.lit+=1;
-    });
-    me.addHandler(GameEvent.JUMP,function(){
-        latern.lit-=1;
-    });
-
-    latern.addHandler(GameEvent.TOUCHDOWN, function(me){
-        me.lit+=1;
-    });
-    latern.addHandler(GameEvent.JUMP, function(me){
-        me.lit-=1;
-    });
-
-
-    // setup logic
-    player = star;
-    player.addHandler(GameEvent.JUMP,function(){
-        console.log("Player.JUMP");
-        //navigator.vibrate(30);
-        //synth.triggerAttack("C3");        
-    });
-    player.addHandler(GameEvent.TOUCHDOWN,function(that,args){
-        console.log("Player.TDOWN",args);
-        //navigator.vibrate(30);
-        //synth.triggerRelease();
-        
-        let planet = getPlanet(that);
-        if (planet===getPlanet(retro) || planet===retro){
-            let mode = RM_HIRES;
-            if (renderMode == mode) mode = RM_RETRO;
-            setRenderMode(mode);
-        }    
-    });
-
-    player.addHandler(GameEvent.TOUCHDOWN, function(){
-        let rosePlanet = getTruePlanet(rose);        
-        if (rosePlanet!==undefined && rosePlanet === getTruePlanet(player)){
-            rose.jump();
-        }
-
-        let portalPlanet = getTruePlanet(portal);
-        if (portalPlanet!==undefined && portalPlanet === getTruePlanet(player)){
-            follow_player = true;
-            cam_front.t_zoom = 1.5;
-            console.log('camera on player');
-        }
-    });
-
-    player.addHandler(GameEvent.JUMP, function(){
-        let portalPlanet = getTruePlanet(portal);
-        if (portalPlanet!==undefined && portalPlanet === getTruePlanet(player)){
-            follow_player = false;
-            cam_front.t_zoom = 1;
-            console.log('camera on front');
-        }
-    });
-
-    rose.addHandler(GameEvent.TOUCHDOWN, function(){
-        let rosePlanet = getTruePlanet(rose)
-        if (rosePlanet!==undefined && rosePlanet === getTruePlanet(player)){
-            rose.jump();
-        }
-    })
-
-    fox.controller = new GocFollow(prince);
-    sheep.controller = new GocFollow(star);
-    prince.controller = new GocFollow(rose);
-
-    player.addHandler(GameEvent.TOUCHDOWN, function(){
-        if (getTruePlanet(player) === getTruePlanet(box) && game.objects.solid.indexOf(sheep)<0){
-            game.objects.solid.splice(rose_index,0,sheep);
-            sheep.Update();
-            sheep.jump();
-        }                
-        if (getTruePlanet(player) === getTruePlanet(bush) && game.objects.solid.indexOf(fox)<0){
-            game.objects.solid.splice(rose_index,0,fox);
-            fox.Update();
-            fox.jump();
-        }                
-        if (getTruePlanet(player) === getTruePlanet(scarf) && game.objects.solid.indexOf(prince)<0){
-            game.objects.solid.splice(rose_index,0,prince);
-            prince.Update();
-            prince.jump();
-        }                
-    })
-
-    GameObject.UpdateAll(game.objects.solid);
-
-}
 
 function make_intro(){
     var p1 = new GoPlanet(`level1-0-0`,300,400);
@@ -983,22 +423,18 @@ function main(){
         renderContext.prepstage(programs);
     });
 
-    stats.showPanel( 1 ); // 0: fps, 1: ms, 2: mb, 3+: custom
-    if (stats.dom!==undefined){
-        document.body.appendChild( stats.dom );    
-    }
-
     setRes(800,800,false); // FIXME
 
     //var go = new GameObject();
     //go.renderer = new RenderSprite("planet");
     //go.position = {x:128,y:128};
 
-    make_stars();
+    Level_makeStars(game);
+    Level_makeZen(game);
 
     //make_intro();
     //make_demo();
-    make_zen();
+    //make_zen();
 
     animationFrame();
 
@@ -1019,51 +455,8 @@ function ai_random(actor){
     ,delay);    
 }
 
-
-function setFullScreen() {
-  var doc = window.document;
-  var docEl = doc.documentElement;
-  docEl = document.getElementById("display");
-
-  var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
-  var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
-  
-  if(!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
-    requestFullScreen.call(docEl);
-  }
-
-}
-
-function toggleOverlay() {
-    let overlay = document.getElementById("overlay");
-    if (overlay.classList.contains("hidden")){
-        overlay.classList.remove("hidden");
-    }else{
-        overlay.classList.add("hidden");
-    }
-}
-
-function toggleFullScreen() {
-  var doc = window.document;
-  var docEl = doc.documentElement;
-  docEl = document.getElementById("display");
-
-  var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
-  var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
-
-  if(!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
-    requestFullScreen.call(docEl);
-  }
-  else {
-    cancelFullScreen.call(doc);
-  }
-}
-
 document.onclick = function(){
-    player.jump();
-    //bgsynth.triggerAttack("C2");
-    //bgsynth.triggerAttack("E2");
-    //bgsynth.triggerAttack("G2");
+    game.onclick();
 }
 
 //document.ondblclick = function(){
@@ -1076,17 +469,6 @@ document.onmousemove = function(e){
     mouse = {x:e.offsetX, y:e.offsetY};
 }
 
-function setRes(sx,sy,crisp){
-    let canvas = document.getElementById("display");    
-    canvas.width = sx;
-    canvas.height= sy;
-    if (crisp){
-        canvas.classList.add("crisp");
-    }else{
-        canvas.classList.remove("crisp");
-    }
-    renderContext.rt_screen.vp = {sx:sx,sy:sy};
-}
 
 </script>
 

@@ -17,6 +17,23 @@ class Effect {
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+class EfRGB extends Effect{
+    static Red = new EfRGB([1,0,0]);
+    static Blu = new EfRGB([0,0,1]);
+    static Mag = new EfRGB([1,0,1]);
+    constructor(rgb){
+        super();
+        this.cmul = rgb.concat([1,]);
+        this.cadd = rgb.concat([0,]);
+    }
+    Apply(go){
+        go.renderer.cmul = this.cmul;
+        go.renderer.cadd = this.cadd;
+    }
+}
+
+
 class GameEvent {
     static TOUCHDOWN = "touchdown";
     static JUMP = "jump";

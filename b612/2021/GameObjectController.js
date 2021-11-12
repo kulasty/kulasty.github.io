@@ -1,3 +1,5 @@
+"use strict";
+
 class GameObjectController extends GameObject {
     Update(actor){
 
@@ -11,6 +13,7 @@ class GocFollow extends GameObjectController{
         //this.addHandler(GameEvent.TOUCHDOWN, this.on_touchdown);
 
         this.paths = [];
+        this.triggerTick = 0;
     }
         
     on_touchdown(me,params){
@@ -20,7 +23,14 @@ class GocFollow extends GameObjectController{
     }
 
     Update(actor){
+        // if not standing - nothing to do, apparently flying already
         if (actor.behaviour instanceof BeaStand === false){
+            return;
+        }
+
+        if (this.triggerTick>0 && perfmon.time>this.triggerTick){
+            this.triggerTick = 0;
+            actor.jump();
             return;
         }
 
@@ -34,12 +44,13 @@ class GocFollow extends GameObjectController{
         // look for paths a.k.a lazy init
         if (paths.length==0){
             if (src!==undefined && dst!==undefined){
-                let astar = staratlas[actor.name];
+                let astar = actor.navMap;
                 for(let tries = 0; tries<3; tries++){
                     paths = astar.getPaths(src,dst);
                     if (paths.length!=0){
                         break;
                     }
+                    const planets = Game.currentGame.planets;
                     dst = planets[Math.floor(MathEx.randRange(0,planets.length))];
                 }
                 this.paths = paths;
@@ -48,7 +59,8 @@ class GocFollow extends GameObjectController{
         // ups, still blocked?
         if (paths.length==0){
             // ups? jump? wait?
-            actor.jump();
+            //actor.jump();
+            this.triggerTick = perfmon.time + Math.random()*500+100;
             return;
         }
 
