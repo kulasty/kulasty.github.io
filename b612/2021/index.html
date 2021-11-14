@@ -166,6 +166,8 @@ var follow_player = false;
 var game = new Game();
 Game.currentGame = game;
 let cnt_frame = 0;
+let cnt_step = 0;
+let bb_background;
 
 // Game.render
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -175,6 +177,11 @@ function render(){
     game.Render();
 
     if (renderContext.BeginScene()){
+
+        if (bb_background===undefined){
+            bb_background = _createBackBuffer(renderContext.gx);
+        }
+
         cnt_frame+=1;
         DebugOverlay_Render(game)
 
@@ -194,7 +201,14 @@ function render(){
         }
                 
         renderContext.camera = cam_back;        
-        GameObject.RenderAll(game.objects.background);
+        if (cnt_frame%4==0){
+            renderContext._setRenderTarget(renderContext.gx, bb_background); // FIXME
+            GameObject.RenderAll(game.objects.background);
+            renderContext._setRenderTarget(renderContext.gx, renderContext.rt_screen);  // FIXME
+        }
+        renderContext._setRenderTarget(renderContext.gx, renderContext.rt_screen);
+        renderContext.RenderFullScreen(renderContext.progs.fse_pass, [bb_background.tx],V4_SOLIDWHITE,V4_TRANSBLACK);
+                
                 
         renderContext.camera = cam_front;
         GameObject.RenderAll(game.objects.solid);        
@@ -241,11 +255,12 @@ function getTruePlanet(go,depth=5){
 function physics(dt){
     time_for_physics=Math.max(Math.min(300,time_for_physics+dt),0);
     while(time_for_physics>time_step){
+        cnt_step+=1;
         let t1 = perfmon.time;
 
         time_for_physics-=time_step;
         
-        GameObject.UpdateAll(game.objects.background);
+        if (cnt_step&1) GameObject.UpdateAll(game.objects.background);
         GameObject.UpdateAll(game.objects.solid);
 
         for(let go of game.objects.solid){
@@ -406,14 +421,14 @@ function main(){
     console.log("main().enter")
     renderContext = new RendererWebGL(800,800); // FIXME 800
 
-    let tick = new Date().now;
+    let tick = Date.now();
     let pnames = ['planet','sprite','glow','fse_pass','fse_accu'];
     let fetchbatch = []
     for(let pn of pnames){
         let vsn = pn;
         let fsn = pn;
-        fetchbatch.push(fetch(`assets/${vsn}.vsh.glsl?`+tick).then(x=>{progress(vsn); return x.text();}));
-        fetchbatch.push(fetch(`assets/${fsn}.fsh.glsl?`+tick).then(x=>{progress(fsn); return x.text();}));
+        fetchbatch.push(fetch(`assets/${vsn}.vsh.glsl?${tick}`).then(x=>{progress(vsn); return x.text();}));
+        fetchbatch.push(fetch(`assets/${fsn}.fsh.glsl?${tick}`).then(x=>{progress(fsn); return x.text();}));
     }
     Promise.all(fetchbatch).then((res)=>{
         let programs = [];

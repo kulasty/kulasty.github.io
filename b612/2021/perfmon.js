@@ -11,7 +11,7 @@ class PerfMon {
         this.metrics = {ph:[],rx:[],ts:[],gl:[]};
     }
     get time(){
-        return performance.now();
+        return performance.now(); // or Date.now(), who knows whats betteR?
     }
 
     static average(array){    

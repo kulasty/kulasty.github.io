@@ -16,6 +16,7 @@ function _createGraphics3d(width, height){
 
     let gl = undefined;
     var names=["webgl3", "webgl2", "webgl","experimental-webgl","webkit-3d","moz-webgl"];
+    //var names=["webgl"];
     for(const name of names){
         try{
             let gx = canvas.getContext(name, {antialias: true, premultipliedAlpha: false });
@@ -30,6 +31,25 @@ function _createGraphics3d(width, height){
     }        
 
     return gl;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+function _createBackBuffer(gl){
+    let tx = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tx);
+
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1024, 1024, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);    
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);   
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+    let fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tx, 0);
+
+    return {fb:fb, tx:tx, vp:{sx:1024,sy:1024}};
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -107,7 +127,7 @@ function xgl_createTexture(gl,img){
     
     // turn on mimaps
     //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);   
-    gl.generateMipmap(gl.TEXTURE_2D);  
+    //gl.generateMipmap(gl.TEXTURE_2D);  
 
     gl.bindTexture(gl.TEXTURE_2D, null);                
     return {tex:tex, width:img.width, height:img.height};
@@ -147,21 +167,8 @@ class RendererWebGL {
         
         let fbs = [];
         for(let i=0;i<3;i++){
-            let tx = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, tx);
-
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1024, 1024, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);    
-        
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);   
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-
-            let fb = gl.createFramebuffer();
-            gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tx, 0);
-
-            fbs.push({fb:fb, tx:tx, vp:{sx:1024,sy:1024}});
+            let bb = _createBackBuffer(gl);
+            fbs.push(bb);
         }        
 
         this.rt_screen = {fb:null, tx:null, vp:{sx:sx, sy:sy}};
@@ -267,7 +274,7 @@ class RendererWebGL {
             gl.bindTexture(gl.TEXTURE_2D, texs[i]);
         }
         gl.uniform4f(prog.cmul,cmul[0],cmul[1],cmul[2],cmul[3]);
-        gl.uniform4f(prog.cadd,cadd[0],cadd[1],cadd[2],cadd[3]);        
+        gl.uniform4fv(prog.cadd,cadd);
         gl.disable(gl.BLEND);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         perfmon.watch("gl",t1);

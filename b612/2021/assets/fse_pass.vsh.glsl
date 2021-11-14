@@ -14,5 +14,5 @@ varying vec2 uv_bck;
 
 void main(void){
     uv_bck = uv;
-    gl_Position = vec4(vp*2.,1.);
+    gl_Position = vec4(vp.x*2.,vp.y*-2.,0.,1.);
 }

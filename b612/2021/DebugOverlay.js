@@ -60,8 +60,8 @@ function DebugOverlay_Render(game){
             if (seg.length>1){                        
                 gx.beginPath();
                 var [h1,h2] = seg;
-                let k1 = h1.k + 0.01;
-                let k2 = h2.k - 0.01;
+                let k1 = h1.k + 0.05;
+                let k2 = h2.k - 0.05;
                 if (k1<k2){
                     let style = 'rgba(128,128,255,0.3)'
                     let r2 = 40+planetindex(h1.dst)*5;

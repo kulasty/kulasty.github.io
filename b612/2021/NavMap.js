@@ -102,8 +102,8 @@ class NavMap{
             for(let i=0;i<map.length-1;i++){
                 const hit = map[i].dst;
                 if (hit===undefined || hit===dst){
-                    let k1 = map[i].k + 0.01;
-                    let k2 = map[i+1].k - 0.01;
+                    let k1 = map[i].k + 0.05;
+                    let k2 = map[i+1].k - 0.05;
                     if (k1<k2){
                         paths.push([k1,k2]);
                     } 
